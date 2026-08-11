@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Container Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+:root{
+  --ocean:#0a1628;--deep:#0d1f3c;--mid:#122347;--panel:#172d54;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --ink:#e8eef7;--ink2:#94a8c4;--ink3:#5a7a9e;
+  --teal:#00c6c6;--teal-dk:#008f8f;--green:#22c55e;
+  --amber:#f59e0b;--red:#ef4444;--radius:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--ocean);color:var(--ink);min-height:100vh;font-size:14px}
+header{
+  background:linear-gradient(135deg,var(--deep),var(--mid));
+  border-bottom:1px solid var(--border2);padding:0 24px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--teal),#0099b0);display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:17px;font-weight:800;color:#fff}
+.logo-sub{font-size:10px;color:var(--ink3)}
+#api-key-input{
+  background:rgba(255,255,255,.06);border:1px solid var(--border2);border-radius:8px;
+  color:var(--ink);padding:7px 12px;font-size:12px;font-family:'Inter',sans-serif;
+  outline:none;width:230px;
+}
+#api-key-input:focus{border-color:var(--teal)}
+.btn-save{background:var(--teal-dk);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
+.btn-save:hover{background:var(--teal)}
+#key-status{font-size:10px;color:var(--ink3);margin-top:3px;text-align:right}
+
+.page{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 64px)}
+.left{background:var(--deep);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.left-top{padding:18px;border-bottom:1px solid var(--border)}
+.sec-lbl{font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field label{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select{
+  background:rgba(255,255,255,.06);border:1.5px solid var(--border2);border-radius:9px;
+  color:var(--ink);padding:10px 14px;font-size:13px;font-family:'JetBrains Mono','Inter',sans-serif;
+  font-weight:600;outline:none;transition:border-color .15s;-webkit-appearance:none;
+}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a7a9e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+.field select option{background:#122347}
+.field input:focus,.field select:focus{border-color:var(--teal)}
+.field input::placeholder{color:var(--ink3);font-family:'Inter',sans-serif;font-weight:400}
+.btn-row{display:flex;gap:8px;margin-top:4px}
+.btn-track{flex:1;background:linear-gradient(135deg,var(--teal-dk),#006f7a);color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s}
+.btn-track:hover{background:linear-gradient(135deg,var(--teal),#009bb0)}
+.btn-track:disabled{opacity:.5;cursor:not-allowed}
+.btn-open{background:rgba(255,255,255,.07);color:var(--ink2);border:1.5px solid var(--border2);border-radius:9px;padding:11px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.btn-open:hover{background:rgba(255,255,255,.12);color:#fff}
+.watch-hdr{padding:12px 16px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.watch-list{flex:1;overflow-y:auto;padding:12px}
+.empty-wl{text-align:center;padding:32px 12px;color:var(--ink3);font-size:12px;line-height:1.8}
+.wcard{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
+.wcard:hover{background:rgba(255,255,255,.07);border-color:var(--border2)}
+.wcard.active{border-color:var(--teal);background:rgba(0,198,198,.06)}
+.wcard-num{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#fff}
+.wcard-carrier{font-size:10px;color:var(--ink3);margin-top:1px}
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.sdot.transit{background:#3b82f6;box-shadow:0 0 5px rgba(59,130,246,.5)}
+.sdot.arrived{background:var(--green);box-shadow:0 0 5px rgba(34,197,94,.5)}
+.sdot.delayed{background:var(--amber)}
+.sdot.unknown{background:var(--ink3)}
+.wcard-rm{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--ink3);font-size:14px;cursor:pointer;opacity:0;padding:2px 6px;border-radius:4px}
+.wcard:hover .wcard-rm{opacity:1}
+.wcard-rm:hover{color:var(--red)}
+.right{overflow-y:auto;padding:28px}
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--ink3);text-align:center;gap:14px}
+.es-icon{font-size:52px;opacity:.4}
+.es-title{font-size:18px;font-weight:700;color:var(--ink2)}
+.es-sub{font-size:13px;max-width:360px;line-height:1.7}
+.dh{background:linear-gradient(135deg,var(--mid),var(--panel));border:1px solid var(--border2);border-radius:14px;padding:20px 22px;margin-bottom:16px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.dh-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#fff}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+.chip{background:rgba(255,255,255,.07);border:1px solid var(--border2);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;color:var(--ink2)}
+.sbadge{padding:8px 16px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px}
+.sbadge.transit{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+.sbadge.arrived{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.sbadge.delayed{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.sbadge.unknown{background:rgba(255,255,255,.07);color:var(--ink2);border:1px solid var(--border2)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-lbl{font-size:9px;font-weight:700;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.stat-val{font-size:20px;font-weight:800;color:#fff}
+.stat-val.teal{color:var(--teal)}
+.stat-sub{font-size:10px;color:var(--ink3);margin-top:3px}
+.events{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.ev-title{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:14px}
+.ev-row{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.ev-row:last-child{border-bottom:none}
+.ev-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.ev-dot.new{background:var(--teal);box-shadow:0 0 8px rgba(0,198,198,.5)}
+.ev-dot.old{background:var(--border2)}
+.ev-desc{font-size:12px;font-weight:600;color:var(--ink)}
+.ev-loc{font-size:11px;color:var(--teal);margin-top:2px}
+.ev-time{font-size:10px;color:var(--ink3);margin-top:2px}
+.ibox{border-radius:12px;padding:16px 18px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start}
+.ibox.amber{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2)}
+.ibox.blue{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2)}
+.ibox.red{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2)}
+.ibox-title{font-size:12px;font-weight:700;margin-bottom:4px}
+.ibox.amber .ibox-title{color:#fcd34d}
+.ibox.blue .ibox-title{color:#93c5fd}
+.ibox.red .ibox-title{color:#fca5a5}
+.ibox-text{font-size:11px;color:var(--ink2);line-height:1.65}
+.cbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.cbtn{padding:8px 14px;background:var(--panel);border:1px solid var(--border2);border-radius:8px;color:var(--ink2);font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.cbtn:hover{color:#fff;border-color:var(--teal)}
+.btn-prim{padding:9px 20px;background:linear-gradient(135deg,var(--teal-dk),#006f7a);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🚢</div>
+    <div>
+      <div class="logo-text">Container Tracker</div>
+      <div class="logo-sub">GOOD QUALITY PAPER GOODS</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="password" id="api-key-input" placeholder="Anthropic API key (sk-ant-...)">
+      <button class="btn-save" onclick="saveApiKey()">Save Key</button>
+    </div>
+    <div id="key-status">Paste your Anthropic API key for live ETA tracking</div>
+  </div>
+</header>
+
+<div class="page">
+  <div class="left">
+    <div class="left-top">
+      <div class="sec-lbl">Track Container</div>
+      <div class="field">
+        <label>Container Number</label>
+        <input type="text" id="container-input" placeholder="e.g. MRKU4363625"
+          oninput="this.value=this.value.toUpperCase().replace(/\s/g,'')"
+          onkeydown="if(event.key==='Enter')trackContainer()">
+      </div>
+      <div class="field">
+        <label>Shipping Line</label>
+        <select id="carrier-select">
+          <option value="">— Auto Detect —</option>
+          <option value="Maersk">Maersk</option>
+          <option value="MSC">MSC</option>
+          <option value="COSCO">COSCO</option>
+          <option value="Evergreen">Evergreen</option>
+          <option value="ONE">ONE</option>
+          <option value="ZIM">ZIM</option>
+          <option value="Yang Ming">Yang Ming</option>
+          <option value="Hapag-Lloyd">Hapag-Lloyd</option>
+          <option value="CMA CGM">CMA CGM</option>
+          <option value="PIL">PIL</option>
+          <option value="OOCL">OOCL</option>
+          <option value="Wan Hai">Wan Hai</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn-track" id="btn-track" onclick="trackContainer()">
+          <span id="btn-inner">🔍 Track</span>
+        </button>
+        <button class="btn-open" onclick="openCarrierSite()" title="Open on carrier website">🌐 Open</button>
+      </div>
+    </div>
+    <div class="watch-hdr">
+      <div class="sec-lbl" style="margin:0">Watch List</div>
+      <button onclick="clearAll()" style="background:none;border:none;color:var(--ink3);font-size:10px;cursor:pointer;font-family:Inter,sans-serif">Clear all</button>
+    </div>
+    <div class="watch-list" id="watch-list">
+      <div class="empty-wl">📋<br>Track a container<br>to add it here</div>
+    </div>
+  </div>
+
+  <div class="right" id="right-panel">
+    <div class="es">
+      <div class="es-icon">🚢</div>
+      <div class="es-title">Container Tracker</div>
+      <div class="es-sub">
+        Enter a container number and click <strong>🔍 Track</strong> for live ETA and events,
+        or <strong>🌐 Open</strong> to go straight to the carrier's website with the number pre-filled.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_WATCH = 'ct_watch_v2';
+const LS_KEY   = 'ct_apikey_v1';
+
+const CARRIER_URLS = {
+  'Maersk':      n=>`https://www.maersk.com/tracking/${n}`,
+  'MSC':         n=>`https://www.track-trace.com/container?container=${n}`,
+  'COSCO':       n=>`https://elines.coscoshipping.com/ebusiness/cargotracking?c=Container&cn=${n}`,
+  'Evergreen':   n=>`https://cargo.evergreen-line.com/elines/en/tracking?query=${n}&type=Container`,
+  'ONE':         n=>`https://ecomm.one-line.com/ecom/CUP_HOM_3301.do?f_cmd=02&cntr_no=${n}`,
+  'ZIM':         n=>`https://www.zim.com/tools/track-a-shipment?containerNumber=${n}`,
+  'Yang Ming':   n=>`https://www.yangming.com/e-service/Track_Trace/track_trace_cargo_tracking.aspx?CNTR_NO=${n}`,
+  'Hapag-Lloyd': n=>`https://www.hapag-lloyd.com/en/online-business/tracing/tracing-by-container.html?container=${n}`,
+  'CMA CGM':     n=>`https://www.cma-cgm.com/ebusiness/tracking/search?SearchBy=Container&Reference=${n}`,
+  'PIL':         n=>`https://www.pilship.com/en-elines-tracking-search/140.html?q=${n}`,
+  'OOCL':        n=>`https://www.track-trace.com/container?container=${n}`,
+  'Wan Hai':     n=>`https://www.track-trace.com/container?container=${n}`,
+  '':            n=>`https://www.track-trace.com/container?container=${n}`,
+};
+
+const PREFIX_MAP = {
+  MSCU:'MSC',MSDU:'MSC',MEDU:'MSC',MSBU:'MSC',
+  COSU:'COSCO',OOLU:'OOCL',
+  EGLV:'Evergreen',EGHU:'Evergreen',
+  MAEU:'Maersk',MRKU:'Maersk',MSKU:'Maersk',MRSU:'Maersk',MNBU:'Maersk',
+  ONEY:'ONE',
+  ZIMU:'ZIM',ZCSU:'ZIM',
+  YMLU:'Yang Ming',
+  HLCU:'Hapag-Lloyd',
+  CMDU:'CMA CGM',APHU:'CMA CGM',CMAU:'CMA CGM',
+  PCIU:'PIL',
+  WHLU:'Wan Hai',
+};
+
+let watchList = [];
+let apiKey    = '';
+let activeNum = null;
+
+function init(){
+  try{ watchList=JSON.parse(localStorage.getItem(LS_WATCH)||'[]'); }catch(e){ watchList=[]; }
+  try{ apiKey=localStorage.getItem(LS_KEY)||''; }catch(e){}
+  if(apiKey){
+    document.getElementById('api-key-input').value=apiKey;
+    setStatus('✓ API key saved','#86efac');
+  }
+  renderWatchList();
+}
+
+function setStatus(msg,color){
+  const el=document.getElementById('key-status');
+  el.textContent=msg; el.style.color=color||'';
+}
+
+function saveApiKey(){
+  const k=document.getElementById('api-key-input').value.trim();
+  apiKey=k;
+  try{ localStorage.setItem(LS_KEY,k); }catch(e){}
+  if(k&&k.startsWith('sk-ant')) setStatus('✓ API key saved — live tracking enabled','#86efac');
+  else if(k) setStatus('⚠ Key should start with sk-ant-','#fcd34d');
+  else setStatus('Paste your Anthropic API key for live ETA tracking','');
+}
+
+async function trackContainer(){
+  const num=document.getElementById('container-input').value.trim().toUpperCase();
+  if(!num){ alert('Please enter a container number.'); return; }
+  const carrier=document.getElementById('carrier-select').value||PREFIX_MAP[num.slice(0,4)]||'';
+
+  if(!apiKey){
+    const entry={num,carrier,data:{noKey:true},lastChecked:new Date().toISOString()};
+    addToWatch(entry); showDetail(entry); return;
+  }
+
+  const btn=document.getElementById('btn-track');
+  const inner=document.getElementById('btn-inner');
+  btn.disabled=true; inner.innerHTML='<div class="spinner"></div>';
+  showLoading(num);
+
+  try{
+    const data=await fetchViaClaude(num,carrier);
+    data.carrier=carrier||PREFIX_MAP[num.slice(0,4)]||'';
+    const entry={num,carrier:data.carrier,data,lastChecked:new Date().toISOString()};
+    addToWatch(entry); showDetail(entry);
+  }catch(err){
+    showError(num,err.message);
+  }finally{
+    btn.disabled=false; inner.innerHTML='🔍 Track';
+  }
+}
+
+function addToWatch(entry){
+  const idx=watchList.findIndex(w=>w.num===entry.num);
+  if(idx>=0) watchList[idx]=entry; else watchList.unshift(entry);
+  activeNum=entry.num;
+  try{ localStorage.setItem(LS_WATCH,JSON.stringify(watchList)); }catch(e){}
+  renderWatchList();
+}
+
+async function fetchViaClaude(num,carrier){
+  const hint=carrier?`Shipping line: ${carrier}.`:`Auto-detect from prefix "${num.slice(0,4)}".`;
+  const prompt=`Find the current tracking status for container number ${num}. ${hint}
+
+Search the carrier website or track-trace.com for this container number and return what you find as JSON only, no explanation:
+{"status":"e.g. In Transit","vessel":"vessel name","voyage":"voyage number","pol":"port of loading","pod":"port of discharge","eta":"YYYY-MM-DD","etd":"YYYY-MM-DD","terminal":"current terminal or port","events":[{"desc":"event description","location":"port name","time":"YYYY-MM-DD"}]}
+
+If no data found return: {"error":"brief reason"}`;
+
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1500,
+      tools:[{type:'web_search_20250305',name:'web_search'}],
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+
+  if(!res.ok){
+    const e=await res.json().catch(()=>({}));
+    throw new Error(e.error?.message||'API error '+res.status);
+  }
+  const j=await res.json();
+  const text=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+  const m=text.match(/\{[\s\S]*\}/);
+  if(!m) throw new Error('No tracking data returned. Try 🌐 Open instead.');
+  const d=JSON.parse(m[0]);
+  if(d.error) throw new Error(d.error+' — try 🌐 Open to check on the carrier website.');
+  return{
+    status:d.status||'Unknown',vessel:d.vessel||'—',voyage:d.voyage||'',
+    pol:d.pol||'',pod:d.pod||'',eta:d.eta||'',etd:d.etd||'',
+    terminal:d.terminal||'',
+    events:(d.events||[]).sort((a,b)=>new Date(b.time)-new Date(a.time)),
+  };
+}
+
+function openCarrierSite(override){
+  const num=(document.getElementById('container-input').value||activeNum||'').trim().toUpperCase();
+  if(!num){ alert('Enter a container number first.'); return; }
+  const c=override!==undefined?override:(document.getElementById('carrier-select').value||PREFIX_MAP[num.slice(0,4)]||'');
+  window.open((CARRIER_URLS[c]||CARRIER_URLS[''])(num),'_blank');
+}
+
+function renderWatchList(){
+  const el=document.getElementById('watch-list');
+  if(!watchList.length){ el.innerHTML='<div class="empty-wl">📋<br>Track a container<br>to add it here</div>'; return; }
+  el.innerHTML=watchList.map((w,i)=>{
+    const st=statusCls(w.data);
+    return`<div class="wcard${w.num===activeNum?' active':''}" onclick="selectWatch(${i})">
+      <button class="wcard-rm" onclick="event.stopPropagation();removeWatch(${i})">✕</button>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div class="wcard-num">${w.num}</div><div class="wcard-carrier">${w.carrier||'Auto'}</div></div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+          <span class="sdot ${st.cls}"></span>
+          <span style="font-size:10px;font-weight:600;color:var(--ink2)">${st.lbl}</span>
+        </div>
+      </div>
+      ${w.data&&w.data.eta?`<div style="font-size:11px;color:var(--teal);font-weight:700;margin-top:4px">ETA ${fmtDate(w.data.eta)}</div>`:''}
+      <div style="font-size:9px;color:var(--ink3);margin-top:3px">${fmtAgo(w.lastChecked)}</div>
+    </div>`;
+  }).join('');
+}
+
+function statusCls(d){
+  if(!d||d.noKey) return{cls:'unknown',lbl:'No data'};
+  const s=(d.status||'').toLowerCase();
+  if(s.includes('arriv')||s.includes('discharg')||s.includes('deliver')) return{cls:'arrived',lbl:'Arrived'};
+  if(s.includes('delay')) return{cls:'delayed',lbl:'Delayed'};
+  if(s.includes('transit')||s.includes('sail')||d.events?.length) return{cls:'transit',lbl:'In Transit'};
+  return{cls:'unknown',lbl:'Unknown'};
+}
+
+function selectWatch(i){
+  activeNum=watchList[i].num;
+  document.getElementById('container-input').value=watchList[i].num;
+  document.getElementById('carrier-select').value=watchList[i].carrier||'';
+  renderWatchList(); showDetail(watchList[i]);
+}
+
+async function refreshWatch(num){
+  document.getElementById('container-input').value=num;
+  const w=watchList.find(x=>x.num===num);
+  if(w) document.getElementById('carrier-select').value=w.carrier||'';
+  await trackContainer();
+}
+
+function removeWatch(i){
+  if(watchList[i]?.num===activeNum) activeNum=null;
+  watchList.splice(i,1);
+  try{ localStorage.setItem(LS_WATCH,JSON.stringify(watchList)); }catch(e){}
+  renderWatchList();
+  if(!watchList.length) showEmpty();
+}
+
+function clearAll(){
+  if(!watchList.length||!confirm('Clear all containers?')) return;
+  watchList=[];activeNum=null;
+  try{localStorage.setItem(LS_WATCH,'[]');}catch(e){}
+  renderWatchList(); showEmpty();
+}
+
+function showEmpty(){
+  document.getElementById('right-panel').innerHTML=`<div class="es"><div class="es-icon">🚢</div><div class="es-title">Container Tracker</div><div class="es-sub">Enter a container number and click Track or 🌐 Open.</div></div>`;
+}
+
+function showLoading(num){
+  document.getElementById('right-panel').innerHTML=`<div class="es"><div class="es-icon" style="font-size:40px">⏳</div><div class="es-title">Searching for ${num}…</div><div class="es-sub">Claude is looking up live tracking data.<br>Usually takes 15–25 seconds.</div></div>`;
+}
+
+function showError(num,msg){
+  document.getElementById('right-panel').innerHTML=`
+    <div class="dh"><div><div class="dh-num">${num}</div></div></div>
+    <div class="ibox red"><div style="font-size:20px">❌</div><div>
+      <div class="ibox-title">Could Not Retrieve Tracking Data</div>
+      <div class="ibox-text">${msg}</div>
+    </div></div>
+    <div class="cbtns">
+      <button class="btn-prim" onclick="openCarrierSite()">🌐 Open on Carrier Website</button>
+      <button class="cbtn" onclick="openCarrierSite('')">🔎 track-trace.com</button>
+    </div>`;
+}
+
+function showDetail(entry){
+  const{num,carrier,data}=entry;
+  const p=document.getElementById('right-panel');
+
+  if(data.noKey){
+    p.innerHTML=`
+      <div class="dh">
+        <div><div class="dh-num">${num}</div>
+        <div class="chips">${carrier?`<span class="chip">📦 ${carrier}</span>`:''}</div></div>
+      </div>
+      <div class="ibox amber"><div style="font-size:20px">🔑</div><div>
+        <div class="ibox-title">Add Anthropic API Key for Live ETA</div>
+        <div class="ibox-text">Paste your <strong>sk-ant-…</strong> key at the top to get live ETA, vessel name, port, and full event history pulled from the carrier's website.<br><br>Same key used in the Price Adjuster tool. Or use <strong>🌐 Open</strong> to go straight to the carrier:</div>
+      </div></div>
+      <div class="cbtns">
+        <button class="btn-prim" onclick="openCarrierSite('')">🌐 Open on track-trace.com</button>
+        ${Object.keys(CARRIER_URLS).filter(k=>k).map(k=>`<button class="cbtn" onclick="openCarrierSite('${k}')">${k}</button>`).join('')}
+      </div>`;
+    return;
+  }
+
+  const st=statusCls(data);
+  const events=data.events||[];
+
+  p.innerHTML=`
+    <div class="dh">
+      <div>
+        <div class="dh-num">${num}</div>
+        <div class="chips">
+          ${carrier?`<span class="chip">📦 ${carrier}</span>`:''}
+          ${data.vessel&&data.vessel!=='—'?`<span class="chip">🚢 ${data.vessel}${data.voyage?' / '+data.voyage:''}</span>`:''}
+          ${data.pol?`<span class="chip">FROM ${data.pol}</span>`:''}
+          ${data.pod?`<span class="chip">TO ${data.pod}</span>`:''}
+        </div>
+      </div>
+      <div class="sbadge ${st.cls}"><span class="sdot ${st.cls}"></span>${data.status||st.lbl}</div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-lbl">ETA</div>
+        <div class="stat-val teal" style="font-size:${data.eta?'20':'16'}px">${data.eta?fmtDate(data.eta):'—'}</div>
+        <div class="stat-sub">${data.eta?daysUntil(data.eta):''}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-lbl">Departed</div>
+        <div class="stat-val" style="font-size:16px">${data.etd?fmtDate(data.etd):'—'}</div>
+        <div class="stat-sub">Port of loading</div>
+      </div>
+      <div class="stat">
+        <div class="stat-lbl">Location</div>
+        <div class="stat-val" style="font-size:13px">${data.terminal||events[0]?.location||'—'}</div>
+        <div class="stat-sub">${events.length?fmtDate(events[0].time):fmtAgo(entry.lastChecked)}</div>
+      </div>
+    </div>
+    ${events.length?`
+    <div class="events">
+      <div class="ev-title">📍 Tracking Events (${events.length})</div>
+      ${events.slice(0,15).map((ev,i)=>`
+        <div class="ev-row">
+          <div class="ev-dot ${i===0?'new':'old'}"></div>
+          <div>
+            <div class="ev-desc">${ev.desc||'Update'}</div>
+            ${ev.location?`<div class="ev-loc">📍 ${ev.location}</div>`:''}
+            <div class="ev-time">${fmtDate(ev.time)}</div>
+          </div>
+        </div>`).join('')}
+    </div>`:`
+    <div class="ibox blue"><div style="font-size:20px">ℹ️</div><div>
+      <div class="ibox-title">No Event History</div>
+      <div class="ibox-text">No tracking events available. Try 🌐 Open to check on the carrier's website.</div>
+    </div></div>`}
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn-prim" onclick="refreshWatch('${num}')">🔄 Refresh</button>
+      <button class="cbtn" onclick="openCarrierSite('${carrier||''}')">🌐 Open on ${carrier||'track-trace.com'}</button>
+    </div>`;
+}
+
+function fmtDate(s){
+  if(!s) return'—';
+  try{ const d=new Date(s); if(isNaN(d)) return s; return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{ return s; }
+}
+function daysUntil(s){
+  try{ const d=Math.round((new Date(s)-new Date())/864e5); if(d<0) return Math.abs(d)+'d ago'; if(d===0) return'Today'; if(d===1) return'Tomorrow'; return'In '+d+' days'; }catch{ return''; }
+}
+function fmtAgo(s){
+  if(!s) return'';
+  try{ const m=Math.floor((Date.now()-new Date(s))/60000); if(m<1) return'just now'; if(m<60) return m+'m ago'; const h=Math.floor(m/60); return h<24?h+'h ago':Math.floor(h/24)+'d ago'; }catch{ return''; }
+}
+
+init();
+</script>
+</body>
+</html>

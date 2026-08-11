@@ -1,0 +1,3803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Order Analyzer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --bg:        #F0F4F8;
+  --surface:   #FFFFFF;
+  --border:    #E4EAF0;
+  --ink:       #1a2e44;
+  --ink2:      #3d5166;
+  --ink3:      #8099b0;
+  --blue:      #3b82f6;
+  --blue-dk:   #1d4ed8;
+  --blue-lt:   #EFF6FF;
+  --green:     #22c55e;
+  --green-dk:  #16a34a;
+  --green-lt:  #F0FDF4;
+  --red:       #ef4444;
+  --red-lt:    #FEF2F2;
+  --amber:     #f97316;
+  --amber-lt:  #FFF7ED;
+  --purple:    #8b5cf6;
+  --purple-lt: #F5F3FF;
+  --navy:      #1e2d3d;
+  --navy2:     #263d52;
+  --navy3:     #2f4d66;
+  --radius:    8px;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-size:14px}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+header{
+  background:var(--navy);
+  color:white;padding:0 28px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:300;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+}
+header h1{font-size:16px;font-weight:800;letter-spacing:-.3px}
+header p{font-size:11px;opacity:.5;margin-top:1px}
+.hdr-stats{font-size:12px;color:rgba(255,255,255,.55);text-align:right;font-weight:500}
+
+/* ── Nav ─────────────────────────────────────────────────────────── */
+.nav-bar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;padding:0 28px;
+  position:sticky;top:56px;z-index:200;
+  box-shadow:var(--shadow);
+}
+.nav-tab{
+  padding:14px 20px;font-size:13px;font-weight:600;
+  color:var(--ink3);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  white-space:nowrap;transition:all .15s;
+}
+.nav-tab:hover{color:var(--blue)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.page{display:none}.page.active{display:block}
+
+/* ── Two-col layout ──────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:268px 1fr;min-height:calc(100vh - 97px)}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────── */
+.sidebar{
+  background:var(--navy);
+  overflow-y:auto;
+  position:sticky;top:97px;
+  height:calc(100vh - 97px);
+  border-right:1px solid rgba(255,255,255,.05);
+}
+.sb-section{border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-section-head{
+  padding:11px 16px;
+  font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  color:rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;user-select:none;transition:color .15s;
+}
+.sb-section-head:hover{color:rgba(255,255,255,.65)}
+.sb-section-body{padding:0 14px 14px}
+.sb-section-body.hidden{display:none}
+
+/* Sidebar uploads */
+.sb-upload{
+  border:1.5px dashed rgba(255,255,255,.15);border-radius:var(--radius);
+  padding:10px 12px;cursor:pointer;position:relative;
+  transition:all .2s;margin-bottom:8px;text-align:center;
+  background:rgba(255,255,255,.02);
+}
+.sb-upload:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.05)}
+.sb-upload.loaded{border-color:var(--green);border-style:solid;background:rgba(34,197,94,.08)}
+.sb-upload input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.sb-upload .sb-icon{font-size:18px;margin-bottom:3px}
+.sb-upload .sb-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.75)}
+.sb-upload .sb-sub{font-size:9px;color:rgba(255,255,255,.3);margin-top:1px}
+.sb-upload .sb-file{font-size:10px;color:var(--green);font-weight:600;margin-top:3px;word-break:break-all}
+
+/* Sidebar controls */
+.sb-ctrl{margin-bottom:10px}
+.sb-ctrl label{
+  font-size:9px;font-weight:700;color:rgba(255,255,255,.35);
+  text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px;
+}
+.sb-ctrl input[type=number]{
+  width:100%;padding:7px 10px;
+  border:1.5px solid rgba(255,255,255,.12);border-radius:var(--radius);
+  font-size:14px;font-weight:700;text-align:center;
+  background:rgba(255,255,255,.06);color:#fef9c3;outline:none;
+  font-family:'JetBrains Mono',monospace;transition:border-color .15s;
+}
+.sb-ctrl input[type=number]:focus{border-color:var(--blue)}
+.sb-ctrl select{
+  width:100%;padding:7px 10px;
+  border:1.5px solid rgba(255,255,255,.15);border-radius:var(--radius);
+  font-size:12px;background:#2a3f54;color:#e2eaf2;outline:none;
+  font-family:'Inter',sans-serif;transition:border-color .15s;
+}
+.sb-ctrl select:focus{border-color:var(--blue)}
+.sb-ctrl select option{background:#2a3f54;color:#e2eaf2}
+
+/* Type pills */
+.sb-pills{display:flex;flex-wrap:wrap;gap:5px}
+.sb-pill{
+  padding:4px 11px;border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1.5px solid rgba(255,255,255,.12);
+  background:transparent;color:rgba(255,255,255,.45);transition:all .15s;
+}
+.sb-pill:hover{border-color:rgba(255,255,255,.4);color:white}
+.sb-pill.active-all{background:var(--blue);border-color:var(--blue);color:white}
+.sb-pill.active-import{background:#7c3aed;border-color:#7c3aed;color:white}
+.sb-pill.active-canada{background:#dc2626;border-color:#dc2626;color:white}
+.sb-pill.active-local{background:var(--green-dk);border-color:var(--green-dk);color:white}
+
+/* Vendor settings */
+.sb-vendor-settings{
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--radius);padding:10px 12px;margin-bottom:10px;display:none;
+}
+.sb-vendor-settings .sb-vs-name{font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px}
+.sb-vendor-settings .row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.sb-vendor-settings .row label{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;min-width:44px}
+.sb-vendor-settings .row select,
+.sb-vendor-settings .row input{
+  flex:1;padding:5px 8px;border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;font-size:12px;background:#2a3f54;color:#e2eaf2;outline:none;
+}
+.sb-vendor-settings .row select option{background:#2a3f54;color:#e2eaf2}
+.sb-vendor-settings .row input{text-align:center;color:#fef9c3;font-weight:700;font-family:'JetBrains Mono',monospace;max-width:64px}
+.btn-sb-save{
+  background:var(--blue);color:white;border:none;
+  padding:7px 12px;border-radius:var(--radius);
+  font-size:11px;font-weight:700;cursor:pointer;width:100%;
+  font-family:'Inter',sans-serif;transition:background .15s;
+}
+.btn-sb-save:hover{background:var(--blue-dk)}
+.sb-saved-ok{font-size:10px;color:var(--green);font-weight:700;display:none;text-align:center;margin-top:5px}
+
+/* Sidebar tags */
+.sb-status-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sb-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;
+  border:1px solid;
+}
+.sb-tag.import{background:rgba(124,58,237,.2);color:#c4b5fd;border-color:rgba(124,58,237,.4)}
+.sb-tag.canada{background:rgba(220,38,38,.2);color:#fca5a5;border-color:rgba(220,38,38,.4)}
+.sb-tag.local{background:rgba(34,197,94,.15);color:#86efac;border-color:rgba(34,197,94,.3)}
+
+/* Bulk import */
+.sb-bulk{margin-bottom:8px}
+.sb-bulk label.btn-bulk{
+  display:block;background:rgba(59,130,246,.15);
+  border:1px solid rgba(59,130,246,.35);color:#93c5fd;
+  padding:7px 10px;border-radius:var(--radius);font-size:11px;font-weight:700;
+  cursor:pointer;text-align:center;position:relative;transition:all .15s;
+  font-family:'Inter',sans-serif;
+}
+.sb-bulk label.btn-bulk:hover{background:rgba(59,130,246,.25)}
+.sb-bulk label.btn-bulk input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.btn-tmpl,.sb-bulk .btn-tmpl{
+  font-size:10px;color:rgba(255,255,255,.3);cursor:pointer;
+  text-decoration:underline;text-align:center;display:block;margin-top:5px;
+}
+.btn-tmpl:hover,.sb-bulk .btn-tmpl:hover{color:rgba(255,255,255,.6)}
+.sb-status-msg{font-size:10px;font-weight:700;margin-top:5px;display:none;text-align:center}
+.sb-info-box{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:6px;padding:8px 10px;font-size:10px;
+  color:rgba(255,255,255,.4);line-height:1.6;margin-bottom:8px;
+}
+.sb-info-box strong{color:rgba(255,255,255,.65)}
+
+/* ── Run Button ────────────────────────────────────────────────────── */
+.btn-run-sb{
+  background:linear-gradient(135deg, var(--green-dk), var(--green));
+  color:white;border:none;padding:12px;border-radius:var(--radius);
+  font-size:13px;font-weight:800;cursor:pointer;width:100%;
+  font-family:'Inter',sans-serif;letter-spacing:.2px;
+  box-shadow:0 0 0 0 rgba(34,197,94,.4);
+  transition:all .2s;
+}
+.btn-run-sb:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(34,197,94,.35)}
+.btn-run-sb:active{transform:translateY(0)}
+.btn-run-sb:not(:disabled){animation:pulse-green 2.5s infinite}
+.btn-run-sb:disabled{
+  background:rgba(255,255,255,.07);color:rgba(255,255,255,.25);
+  cursor:not-allowed;animation:none;box-shadow:none;transform:none;
+}
+@keyframes pulse-green{
+  0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.35)}
+  50%{box-shadow:0 0 0 6px rgba(34,197,94,.0)}
+}
+
+/* ── Content area ────────────────────────────────────────────────── */
+.content{padding:22px 22px 0 22px;overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 97px)}
+
+/* Summary cards */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+#results{display:flex;flex-direction:column;height:100%;min-height:0;overflow:hidden}
+.results-scroll-area{flex:1;overflow-y:auto;min-height:0;padding-bottom:12px}
+.stat-card{
+  background:var(--surface);border-radius:var(--radius);
+  padding:16px 18px;border:1px solid var(--border);
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.stat-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--blue)}
+.stat-card.warn::before{background:var(--amber)}
+.stat-card.ok::before{background:var(--green)}
+.stat-card.trend::before{background:var(--purple)}
+.stat-card .val{font-size:28px;font-weight:800;color:var(--ink);font-family:'JetBrains Mono',monospace;line-height:1}
+.stat-card.warn .val{color:var(--amber)}
+.stat-card.ok .val{color:var(--green-dk)}
+.stat-card.trend .val{color:var(--purple)}
+.stat-card .lbl{font-size:10px;color:var(--ink3);margin-top:5px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+
+/* Results header */
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.results-header h2{font-size:15px;font-weight:700;color:var(--ink)}
+.filter-tabs{display:flex;gap:5px;flex-wrap:wrap}
+.tab{
+  padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--border);
+  background:var(--surface);color:var(--ink3);transition:all .15s;
+}
+.tab:hover{border-color:var(--blue);color:var(--blue)}
+.tab.active{background:var(--blue);color:white;border-color:var(--blue)}
+.tab.active+.tab.active{margin-left:-1px}
+.tab.warn.active{background:var(--amber);border-color:var(--amber)}
+.tab.trend.active{background:var(--purple);border-color:var(--purple)}
+.tab.prev.active{background:var(--purple);border-color:var(--purple)}
+[data-filter="backlog"].active{background:var(--red)!important;color:white!important;border-color:var(--red)!important}
+.btn-export{
+  background:var(--green-dk);color:white;border:none;
+  padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;
+}
+.btn-export:hover{background:var(--green)}
+
+/* Table */
+.table-wrap{
+  background:var(--surface);border-radius:var(--radius);
+  overflow:visible;box-shadow:var(--shadow);border:1px solid var(--border);
+}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{
+  background:var(--navy);color:rgba(255,255,255,.85);
+  padding:10px 12px;text-align:left;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  white-space:nowrap;position:sticky;top:0;z-index:1;
+  border-right:1px solid rgba(255,255,255,.1);
+}
+thead th:last-child{border-right:none}
+thead th.num{text-align:right}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:#F8FAFC}
+tbody tr.trending{background:#FFFBEB}
+tbody tr.trending:hover{background:#FEF3C7}
+tbody tr.fillrow{background:#EFF6FF}
+tbody td{padding:9px 12px;vertical-align:middle;border-right:1px solid var(--border)}
+tbody td:last-child{border-right:none}
+tbody td.num{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px}
+tbody td.item{font-weight:700;color:var(--blue-dk);font-size:12px;white-space:nowrap;font-family:'JetBrains Mono',monospace}
+tbody td.desc{color:var(--ink2);max-width:220px;font-size:12px}
+tbody td.vnd{color:var(--ink3);font-size:11px;white-space:nowrap}
+
+/* Badges */
+.vtype-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+.vtype-badge.import{background:#EDE9FE;color:#6d28d9}
+.vtype-badge.canada{background:#FEE2E2;color:#b91c1c}
+.vtype-badge.local{background:#DCFCE7;color:#15803d}
+.vtype-badge.unset{background:var(--border);color:var(--ink3)}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.badge.order{background:#FEF2F2;color:#dc2626}
+.badge.ok{background:#F0FDF4;color:#16a34a}
+.trend-badge,.peak-badge,.fill-badge,.prev-badge{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;
+  white-space:nowrap;cursor:pointer;transition:opacity .15s;
+}
+.trend-badge:hover,.peak-badge:hover,.fill-badge:hover,.prev-badge:hover{opacity:.75}
+.trend-badge{background:#FEF3C7;color:#92400e}
+.peak-badge{background:#F5F3FF;color:#6d28d9}
+.fill-badge{background:#DBEAFE;color:#1d4ed8}
+.prev-badge{background:#F5F3FF;color:#6d28d9}
+.order-qty{font-weight:800;color:var(--red);font-size:13px;font-family:'JetBrains Mono',monospace}
+.order-qty.zero{color:var(--green-dk)}
+.seasonal-mult{font-size:10px;color:var(--purple);font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* Status / Empty */
+#status{font-size:11px;color:#fca5a5;font-weight:600;min-height:16px;margin-top:6px}
+.empty{text-align:center;padding:60px 20px;color:var(--ink3)}
+.empty .icon{font-size:48px;margin-bottom:12px}
+.empty p{font-size:14px;line-height:1.7;color:var(--ink3)}
+.empty strong{color:var(--ink2)}
+
+/* ── DETAIL MODAL ────────────────────────────────────────────────── */
+.detail-overlay{
+  position:fixed;inset:0;background:rgba(15,25,40,.6);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+  padding:20px;opacity:0;transition:opacity .2s;backdrop-filter:blur(4px);
+}
+.detail-overlay.show{opacity:1}
+.detail-modal{
+  background:var(--surface);border-radius:12px;width:100%;max-width:500px;
+  box-shadow:0 24px 64px rgba(0,0,0,.25);
+  transform:translateY(12px);transition:transform .2s;
+  overflow:hidden;max-height:90vh;overflow-y:auto;
+}
+.detail-overlay.show .detail-modal{transform:translateY(0)}
+.dm-header{
+  padding:18px 20px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:12px;
+  position:sticky;top:0;background:var(--surface);z-index:1;
+}
+.dm-icon{font-size:26px;flex-shrink:0}
+.dm-title{font-size:15px;font-weight:800;color:var(--ink)}
+.dm-subtitle{font-size:12px;color:var(--ink3);margin-top:2px}
+.dm-close{margin-left:auto;font-size:20px;color:var(--ink3);cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0}
+.dm-close:hover{color:var(--ink)}
+.dm-body{padding:18px 20px}
+.dm-section{margin-bottom:16px}.dm-section:last-child{margin-bottom:0}
+.dm-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px}
+.dm-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.dm-stat{background:var(--bg);border-radius:var(--radius);padding:10px 12px;border-left:3px solid var(--border)}
+.dm-stat .ds-val{font-size:18px;font-weight:800;color:var(--blue);font-family:'JetBrains Mono',monospace}
+.dm-stat .ds-lbl{font-size:10px;color:var(--ink3);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
+.dm-stat.green{border-left-color:var(--green)}.dm-stat.green .ds-val{color:var(--green-dk)}
+.dm-stat.amber{border-left-color:var(--amber)}.dm-stat.amber .ds-val{color:var(--amber)}
+.dm-stat.red{border-left-color:var(--red)}.dm-stat.red .ds-val{color:var(--red)}
+.dm-stat.purple{border-left-color:var(--purple)}.dm-stat.purple .ds-val{color:var(--purple)}
+.dm-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.dm-bar-label{font-size:11px;color:var(--ink2);width:50px;flex-shrink:0;font-weight:600;font-family:'JetBrains Mono',monospace}
+.dm-bar-track{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden}
+.dm-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.dm-bar-val{font-size:11px;font-weight:700;color:var(--ink);width:48px;text-align:right;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.dm-note{border-radius:var(--radius);padding:11px 13px;font-size:12px;color:var(--ink2);line-height:1.65;border-left:3px solid var(--blue);background:var(--blue-lt)}
+.dm-note.amber{border-left-color:var(--amber);background:var(--amber-lt)}
+.dm-note.green{border-left-color:var(--green);background:var(--green-lt)}
+.dm-note.purple{border-left-color:var(--purple);background:var(--purple-lt)}
+.dm-hol-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.dm-hol-row:last-child{border-bottom:none}
+.dm-hol-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dm-hol-name{font-size:12px;font-weight:700;color:var(--ink);flex:1;min-width:0}
+.dm-hol-date{font-size:11px;color:var(--ink3);white-space:nowrap}
+.dm-hol-mult{font-size:11px;font-weight:800;color:var(--purple);background:var(--purple-lt);padding:2px 8px;border-radius:10px;flex-shrink:0}
+.dm-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;position:sticky;bottom:0;background:var(--surface)}
+.btn-dm-close{background:var(--navy);color:white;border:none;padding:8px 22px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s}
+.btn-dm-close:hover{background:var(--navy3)}
+.badge-clickable{cursor:pointer;transition:opacity .15s}.badge-clickable:hover{opacity:.75}
+
+/* ── Google Sync input ───────────────────────────────────────────── */
+#gs-url{
+  width:100%;padding:6px 9px;
+  border:1.5px solid rgba(255,255,255,.12);border-radius:6px;
+  font-size:11px;background:rgba(255,255,255,.05);color:white;outline:none;
+  font-family:'Inter',sans-serif;margin-top:2px;
+}
+#gs-url:focus{border-color:var(--blue)}
+#gs-url::placeholder{color:rgba(255,255,255,.2)}
+
+/* ── Calendar page ───────────────────────────────────────────────── */
+.cal-wrap{max-width:1100px;margin:0 auto;padding:24px 22px}
+.cal-hero{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);
+  color:white;border-radius:12px;padding:26px 30px;
+  margin-bottom:20px;display:flex;align-items:flex-start;gap:18px;
+  box-shadow:var(--shadow-md);
+}
+.cal-hero .star{font-size:44px}
+.cal-hero h2{font-size:19px;font-weight:800;margin-bottom:5px}
+.cal-hero p{font-size:13px;opacity:.75;line-height:1.65}
+.holiday-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-bottom:20px}
+.holiday-card{
+  background:var(--surface);border-radius:10px;
+  padding:16px 18px;border:1px solid var(--border);
+  box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.holiday-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hcol,var(--blue))}
+.hc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.hc-name{font-size:14px;font-weight:800;color:var(--ink)}
+.hc-greg{font-size:12px;color:var(--blue-dk);font-weight:600;margin-bottom:3px}
+.hc-days{font-size:11px;color:var(--ink3);margin-bottom:9px}
+.hc-days span{font-weight:700;color:var(--hcol,var(--blue))}
+.hc-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hc-controls label{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase}
+.hc-controls input[type=number]{
+  width:52px;padding:3px 6px;border:1.5px solid var(--border);
+  border-radius:6px;font-size:12px;font-weight:700;text-align:center;
+  background:var(--bg);color:var(--blue-dk);font-family:'JetBrains Mono',monospace;
+}
+.hc-toggle{display:flex;align-items:center;gap:6px;cursor:pointer}
+.hc-toggle input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--blue)}
+.hc-toggle span{font-size:11px;font-weight:600;color:var(--ink2)}
+.countdown-badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.countdown-badge.soon{background:var(--red-lt);color:var(--red)}
+.countdown-badge.medium{background:var(--amber-lt);color:var(--amber)}
+.countdown-badge.fine{background:var(--green-lt);color:var(--green-dk)}
+.cal-legend{background:var(--surface);border-radius:10px;padding:14px 18px;margin-bottom:18px;border:1px solid var(--border)}
+.cal-legend h3{font-size:13px;font-weight:700;margin-bottom:10px}
+.legend-row{display:flex;gap:18px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.peak-info{background:var(--purple-lt);border:1px solid #ddd6fe;border-radius:10px;padding:16px 18px;margin-bottom:20px}
+.peak-info h3{font-size:13px;font-weight:700;color:var(--purple);margin-bottom:7px}
+.peak-info p{font-size:12px;color:#4c1d95;line-height:1.65}
+.peak-note{background:white;border-radius:7px;padding:10px 13px;margin-top:10px;font-size:12px;color:var(--purple);font-weight:600;border-left:3px solid var(--purple)}
+
+/* ── Draggable columns ───────────────────────────────────────────── */
+thead th{cursor:grab}
+thead th:active{cursor:grabbing}
+thead th.drag-over{background:var(--navy3);outline:2px solid var(--green);outline-offset:-2px}
+thead th.dragging{opacity:.4}
+.col-drag-handle{display:inline-block;margin-right:5px;opacity:.4;font-size:10px;pointer-events:none}
+
+/* ── Sortable columns ────────────────────────────────────────────── */
+thead th{user-select:none}
+thead th.sortable{cursor:pointer!important}
+thead th.sortable:hover{background:var(--navy3)}
+thead th.sort-asc .sort-arrow::after{content:' ↑'}
+thead th.sort-desc .sort-arrow::after{content:' ↓'}
+.sort-arrow{opacity:.5;font-size:9px}
+thead th.sort-asc .sort-arrow,thead th.sort-desc .sort-arrow{opacity:1;color:var(--green)}
+
+/* ── Vendor search dropdown ──────────────────────────────────────── */
+#vendor-search:focus{border-color:var(--blue)}
+#vendor-search::placeholder{color:rgba(255,255,255,.3)}
+.vendor-opt{
+  padding:8px 12px;font-size:12px;color:#e2eaf2;cursor:pointer;
+  transition:background .1s;border-bottom:1px solid rgba(255,255,255,.06);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.vendor-opt:last-child{border-bottom:none}
+.vendor-opt:hover,.vendor-opt.highlighted{background:rgba(59,130,246,.3);color:white}
+.vendor-opt.selected{background:rgba(34,197,94,.2);color:#86efac}
+.vendor-opt mark{background:transparent;color:var(--green);font-weight:800}
+.vendor-no-results{padding:10px 12px;font-size:11px;color:rgba(255,255,255,.3);text-align:center}
+
+/* ── Backlog rows ─────────────────────────────────────────────────── */
+tbody tr.backlogrow{background:#FFF5F5}
+tbody tr.backlogrow:hover{background:#FEE2E2}
+
+/* ── Order selection ─────────────────────────────────────────────── */
+.order-checkbox{width:16px;height:16px;cursor:pointer;accent-color:var(--green)}
+tbody tr.row-selected{background:#F0FDF4!important}
+tbody tr.row-selected:hover{background:#DCFCE7!important}
+
+.order-selection-bar{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--navy);color:white;
+  padding:12px 20px;border-radius:30px;
+  display:none;align-items:center;gap:14px;
+  box-shadow:0 8px 32px rgba(0,0,0,.3);
+  z-index:400;font-size:13px;
+}
+.order-selection-bar .sel-count{font-weight:700;color:#86efac}
+.order-selection-bar button{
+  border:none;border-radius:20px;padding:7px 16px;
+  font-size:12px;font-weight:700;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:all .15s;
+}
+.btn-export-selected{background:var(--green-dk);color:white}
+.btn-export-selected:hover{background:var(--green)}
+.btn-clear-selection{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.btn-clear-selection:hover{background:rgba(255,255,255,.2)}
+
+.btn-select-all{
+  background:none;border:1.5px solid var(--border);color:var(--ink3);
+  padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;
+  cursor:pointer;font-family:Inter,sans-serif;transition:all .15s;
+}
+.btn-select-all:hover{border-color:var(--green);color:var(--green-dk)}
+
+/* ── File upload progress ────────────────────────────────────────── */
+.sb-upload .upload-progress{
+  margin-top:6px;display:none;
+}
+.sb-upload .upload-progress-bar{
+  height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;
+}
+.sb-upload .upload-progress-fill{
+  height:100%;background:var(--green);border-radius:2px;
+  transition:width .1s;width:0%;
+}
+.sb-upload .upload-progress-label{
+  font-size:9px;color:rgba(255,255,255,.4);margin-top:3px;text-align:center;
+}
+.sb-upload.uploading{border-color:var(--amber)!important;background:rgba(251,191,36,.05)!important}
+.sb-upload.uploading .sb-label{color:var(--amber)}
+
+/* ── Analysis page flags ─────────────────────────────────────────── */
+.flag-slow{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#FEF3C7;color:#92400e;white-space:nowrap}
+.flag-over{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#EFF6FF;color:#1d4ed8;white-space:nowrap}
+.flag-new{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#F0FDF4;color:#16a34a;white-space:nowrap}
+.flag-conc{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#FEF2F2;color:#dc2626;white-space:nowrap}
+
+/* ── Order Qty input ──────────────────────────────────────────── */
+.oqty-input{
+  width:72px;padding:4px 6px;
+  border:1.5px solid var(--border);border-radius:6px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+  text-align:right;color:var(--ink);background:var(--bg);
+  outline:none;transition:border-color .15s;
+}
+.oqty-input:focus{border-color:var(--blue);background:#fff;}
+.oqty-input.edited{border-color:var(--amber);background:#fffbeb;color:var(--amber);}
+.oqty-input.zero{color:var(--ink3);}
+
+#item-search-orders::placeholder, #item-search-analysis::placeholder {
+  color: #8099b0;
+  font-weight:400;
+}
+#item-search-orders:focus, #item-search-analysis:focus {
+  border-color: rgba(255,255,255,.7);
+  background: rgba(255,255,255,.2);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📦 Inventory Order Analyzer</h1>
+    <p>Vendor filtering · Hebrew calendar peak planning · Prior year seasonality · Fill-in substitutes</p>
+  </div>
+  <div class="hdr-stats" id="hdr-stats"></div>
+</header>
+
+<div class="nav-bar">
+  <div class="nav-tab active" onclick="showPage('order',this)">📊 Order Analysis</div>
+  <div class="nav-tab" onclick="showPage('analysis',this)">🔍 Inventory Analysis</div>
+  <div class="nav-tab" onclick="showPage('calendar',this)">✡️ Jewish Holidays</div>
+</div>
+
+<!-- ════════════════════════════ PAGE: ORDER ANALYSIS ════════════════════════════ -->
+<div class="page active" id="page-order">
+<div class="layout">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="sidebar">
+
+    <!-- Current Sales -->
+    <div class="sb-section">
+      <div class="sb-section-head" onclick="toggleSB('sb-cursales')">📊 SALES FILE <span>▾</span></div>
+      <div class="sb-section-body" id="sb-cursales">
+        <div class="sb-upload" id="card-sales-dated">
+          <input type="file" accept=".xlsx,.xls" onchange="handleFile('salesdated',this)">
+          <div class="sb-icon">📈</div>
+          <div class="sb-label">Sales with Dates (trend)</div>
+          <div class="sb-sub">Item No · Month (M/YYYY) · QTY · upload full year (e.g. Jul 2025–Jul 2026)</div>
+          <div class="sb-file" id="salesdated-name">No file selected</div>
+          <div class="upload-progress"><div class="upload-progress-bar"><div class="upload-progress-fill"></div></div><div class="upload-progress-label">Reading file...</div></div>
+        </div>
+        <div class="sb-upload" id="card-stock">
+          <input type="file" accept=".xlsx,.xls" onchange="handleFile('stock',this)">
+          <div class="sb-icon">🏭</div>
+          <div class="sb-label">In-Stock File</div>
+          <div class="sb-sub">On-hand · Available · On-order</div>
+          <div class="sb-file" id="stock-name">No file selected</div>
+          <div class="upload-progress"><div class="upload-progress-bar"><div class="upload-progress-fill"></div></div><div class="upload-progress-label">Reading file...</div></div>
+        </div>
+        <div class="sb-ctrl">
+          <label>Date Range for Rate Calculation</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select id="date-from" style="flex:1;min-width:90px;font-size:11px;padding:5px 8px;
+              background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.14);border-radius:7px;
+              color:var(--ink-light);outline:none;-webkit-appearance:none"
+              onchange="updateMonthsFromDates()">
+              <option value="">From</option>
+            </select>
+            <span style="color:rgba(255,255,255,.3);font-size:11px">→</span>
+            <select id="date-to" style="flex:1;min-width:90px;font-size:11px;padding:5px 8px;
+              background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.14);border-radius:7px;
+              color:var(--ink-light);outline:none;-webkit-appearance:none"
+              onchange="updateMonthsFromDates()">
+              <option value="">To</option>
+            </select>
+          </div>
+          <div id="date-range-info" style="font-size:10px;color:rgba(255,255,255,.35);margin-top:4px"></div>
+          <input type="hidden" id="months" value="12">
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Fill-in Substitutes -->
+    <div class="sb-section">
+      <div class="sb-section-head" onclick="toggleSB('sb-fillins')">🔄 FILL-IN SUBSTITUTES <span>▾</span></div>
+      <div class="sb-section-body" id="sb-fillins">
+        <div class="sb-info-box">Upload a file with 3 columns: <strong>Main Item | Fill-in 1 | Fill-in 2</strong>. Fill-in sales will be added to the main item's demand.</div>
+        <div class="sb-upload" id="card-fillin">
+          <input type="file" accept=".xlsx,.xls" onchange="handleFile('fillin',this)">
+          <div class="sb-icon">🔄</div>
+          <div class="sb-label">Fill-in Map</div>
+          <div class="sb-sub">Main Item · Fill-in 1 · Fill-in 2</div>
+          <div class="sb-file" id="fillin-name">No file selected</div>
+          <div class="upload-progress"><div class="upload-progress-bar"><div class="upload-progress-fill"></div></div><div class="upload-progress-label">Reading file...</div></div>
+        </div>
+        <div class="sb-status-msg" id="fillin-status"></div>
+        <span class="btn-tmpl" onclick="downloadFillInTemplate()" style="font-size:10px;color:rgba(255,255,255,.4);cursor:pointer;text-decoration:underline;display:block;text-align:center;margin-top:4px">⬇ Download template</span>
+      </div>
+    </div>
+
+    <!-- Vendor Settings -->
+    <div class="sb-section">
+      <div class="sb-section-head" onclick="toggleSB('sb-vendors')">🏷 VENDOR SETTINGS <span>▾</span></div>
+      <div class="sb-section-body" id="sb-vendors">
+        <div class="sb-ctrl">
+          <label>Vendor Type Filter</label>
+          <div class="sb-pills">
+            <div class="sb-pill active-all" data-type="" onclick="setTypeFilter('',this)">All</div>
+            <div class="sb-pill" data-type="Import" onclick="setTypeFilter('Import',this)">🌐 Import</div>
+            <div class="sb-pill" data-type="Canada" onclick="setTypeFilter('Canada',this)">🍁 Canada</div>
+            <div class="sb-pill" data-type="Local" onclick="setTypeFilter('Local',this)">🏠 Local</div>
+          </div>
+        </div>
+        <div class="sb-ctrl">
+          <label>Filter by Vendor</label>
+          <div style="position:relative">
+            <input type="text" id="vendor-search"
+              placeholder="🔍 Search vendor..."
+              autocomplete="off"
+              oninput="filterVendorList()"
+              onfocus="showVendorDropdown()"
+              onkeydown="vendorSearchKeydown(event)"
+              style="width:100%;padding:7px 10px;border:1.5px solid rgba(255,255,255,.15);
+                border-radius:var(--radius);font-size:12px;background:#2a3f54;
+                color:#e2eaf2;outline:none;font-family:'Inter',sans-serif;
+                transition:border-color .15s;cursor:text"
+            >
+            <div id="vendor-dropdown"
+              style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);
+                background:#2a3f54;border:1.5px solid rgba(255,255,255,.2);
+                border-radius:var(--radius);max-height:200px;overflow-y:auto;
+                z-index:500;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+              <div id="vendor-list"></div>
+            </div>
+          </div>
+          <!-- Hidden actual value holder -->
+          <input type="hidden" id="vendor-filter" value="">
+        <!-- Selected vendor badge -->
+        <div id="vendor-badge" style="display:none;align-items:center;gap:6px;margin-top:5px;
+          padding:4px 10px;background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.35);
+          border-radius:20px;font-size:11px;color:#93c5fd;font-weight:700;max-width:100%">
+          <span style="opacity:.7">✓</span>
+          <span id="vendor-badge-text" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"></span>
+          <span onclick="clearVendorSearch()" style="cursor:pointer;opacity:.6;font-size:14px;flex-shrink:0" title="Clear">×</span>
+        </div>
+        </div>
+        <!-- Per-vendor settings -->
+        <div class="sb-vendor-settings" id="vendor-settings">
+          <div class="sb-vs-name" id="vs-vendor-name">—</div>
+          <div class="row"><label>Type</label>
+            <select id="vs-type">
+              <option value="">— select —</option>
+              <option value="Import">🌐 Import</option>
+              <option value="Canada">🍁 Canada</option>
+              <option value="Local">🏠 Local</option>
+            </select>
+          </div>
+          <div class="row"><label>Lead Time</label>
+            <input type="number" id="vs-leadtime" value="3.5" min="0.5" max="24" step="0.5">
+            <span style="font-size:10px;color:rgba(255,255,255,.4)">mo</span>
+          </div>
+          <button class="btn-sb-save" onclick="saveVendorSettings()">💾 Save</button>
+          <div class="sb-saved-ok" id="saved-badge">✓ Saved!</div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button onclick="downloadVendorSettings()" title="Download all saved vendors as Excel"
+              style="flex:1;padding:5px 8px;border:1px solid rgba(255,255,255,.2);border-radius:6px;
+                background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:10px;
+                font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+              ⬇ Download
+            </button>
+            <label title="Import vendor settings from Excel" style="flex:1">
+              <input type="file" accept=".xlsx,.xls" onchange="importVendorSettings(this)" style="display:none">
+              <span style="display:block;padding:5px 8px;border:1px solid rgba(255,255,255,.2);border-radius:6px;
+                background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);font-size:10px;
+                font-weight:700;cursor:pointer;font-family:Inter,sans-serif;text-align:center">
+                ⬆ Import
+              </span>
+            </label>
+          </div>
+        </div>
+        <!-- Saved tags -->
+        <div class="sb-status-tags" id="saved-tags-row"></div>
+        <!-- Always-visible Download/Import vendor settings -->
+        <div style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)">
+          <button onclick="downloadVendorSettings()"
+            style="flex:1;padding:6px 8px;border:1px solid rgba(255,255,255,.2);border-radius:6px;
+              background:rgba(255,255,255,.06);color:rgba(255,255,255,.65);font-size:10px;
+              font-weight:700;cursor:pointer;font-family:Inter,sans-serif"
+            title="Download all vendor lead times as Excel to share">
+            ⬇ Share Lead Times
+          </button>
+          <label style="flex:1;cursor:pointer" title="Import vendor settings from Excel">
+            <input type="file" accept=".xlsx,.xls" onchange="importVendorSettings(this)" style="display:none">
+            <span style="display:block;padding:6px 8px;border:1px solid rgba(255,255,255,.2);border-radius:6px;
+              background:rgba(255,255,255,.06);color:rgba(255,255,255,.65);font-size:10px;
+              font-weight:700;text-align:center;font-family:Inter,sans-serif">
+              ⬆ Import
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Google Sheets Sync -->
+    <div class="sb-section">
+      <div class="sb-section-head" onclick="toggleSB('sb-gsync')">🔗 GOOGLE SHEETS SYNC <span>▾</span></div>
+      <div class="sb-section-body" id="sb-gsync">
+        <div class="sb-info-box">Paste your Google Sheet URL to sync vendor settings, lead times, fill-in maps and holiday configs with your team. <strong>Sheet must be published to web.</strong></div>
+        <div class="sb-ctrl">
+          <label>Google Sheet URL</label>
+          <input type="text" id="gs-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none">
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn-sb-save" style="flex:1;background:var(--blue)" onclick="syncFromGoogle()">⬇ Pull</button>
+          <button class="btn-sb-save" style="flex:1;background:var(--green-dk)" onclick="pushToGoogle()">⬆ Push</button>
+        </div>
+        <div class="sb-status-msg" id="gs-status" style="margin-top:6px"></div>
+        <div style="margin-top:8px">
+          <span class="btn-tmpl" onclick="openGoogleSetupGuide()" style="font-size:10px;color:rgba(255,255,255,.4);cursor:pointer;text-decoration:underline;display:block;text-align:center">📋 How to set up Google Sheet</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Import -->
+    <div class="sb-section">
+      <div class="sb-section-head" onclick="toggleSB('sb-bulk')">📂 BULK IMPORT <span>▾</span></div>
+      <div class="sb-section-body" id="sb-bulk">
+        <div class="sb-bulk">
+          <label class="btn-bulk">📂 Upload Vendor List
+            <input type="file" accept=".xlsx,.xls" onchange="handleBulkImport(this)">
+          </label>
+          <span class="btn-tmpl" onclick="downloadTemplate()">⬇ Download template</span>
+          <div class="sb-status-msg" id="bulk-status"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CBM Data (optional) -->
+    <div style="padding:8px 14px 0">
+      <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.08em;margin-bottom:6px">CBM DATA (OPTIONAL)</div>
+      <label class="sb-upload" id="cbm-upload-btn" title="Upload Excel with Item# and CBM per carton columns">
+        <input type="file" accept=".xlsx,.xls" onchange="loadCBMFile(this)">
+        <div class="sb-icon">📐</div>
+        <div class="sb-label">CBM Sheet</div>
+        <div class="sb-sub">Item# + CBM/carton</div>
+        <div class="sb-file" id="cbm-file-name"></div>
+      </label>
+    </div>
+
+    <!-- Run -->
+    <div style="padding:14px">
+      <button class="btn-run-sb" id="btn-run" onclick="runAnalysis()" disabled>▶ Run Analysis</button>
+      <div id="status" style="font-size:11px;color:#f87171;font-weight:600;margin-top:6px;min-height:16px"></div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ── RIGHT CONTENT ── -->
+  <div class="content">
+    <div id="results" style="display:none">
+      <div class="summary-row" id="summary-cards"></div>
+      <!-- Load Builder Bar -->
+      <div id="load-builder-bar" style="display:none;background:linear-gradient(135deg,#1a3a5c,#0f2740);
+        border:1px solid rgba(99,179,237,.25);border-radius:12px;padding:14px 18px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:12px;font-weight:700;color:#93c5fd">
+            🚢 CURRENT LOAD
+          </div>
+          <div style="font-size:13px;font-weight:800;color:#e2e8f0" id="load-ctns-display">0 ctns</div>
+          <div style="font-size:13px;font-weight:800;color:#86efac" id="load-cbm-display">0.0 / 68 CBM</div>
+          <!-- Progress bar -->
+          <div style="flex:1;min-width:120px;max-width:220px;height:10px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden">
+            <div id="load-progress-bar" style="height:100%;background:linear-gradient(90deg,#3b82f6,#10b981);border-radius:5px;width:0%;transition:width .3s"></div>
+          </div>
+          <button onclick="markLoadDone()" style="background:#10b981;color:white;border:none;border-radius:20px;
+            padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+            ✓ Load Complete
+          </button>
+          <div id="completed-loads-count" style="font-size:11px;color:rgba(255,255,255,.5);cursor:pointer"
+            onclick="showCompletedLoads()"></div>
+        </div>
+      </div>
+
+      <div class="results-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <h2 id="results-title">Results</h2>
+          <div style="position:relative">
+            <input type="text" id="item-search-orders" placeholder="🔍 Item #..."
+              oninput="renderTable()"
+              style="padding:5px 10px;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;
+                font-size:12px;background:rgba(255,255,255,.92);color:#1a2e44;outline:none;width:140px;
+                font-family:'Inter',sans-serif;font-weight:500"
+              title="Search by item number">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="filter-tabs">
+            <div class="tab active" onclick="setFilter('all',this)" data-filter="all">All Items</div>
+            <div class="tab warn"   onclick="setFilter('order',this)" data-filter="order">Order Needed</div>
+            <div class="tab"        onclick="setFilter('ok',this)" data-filter="ok">OK</div>
+            <div class="tab trend"  onclick="setFilter('trend',this)" data-filter="trend">📈 Trending Up</div>
+          <div class="tab" style="border-color:#ef4444;color:#ef4444" onclick="setFilter('backlog',this)" data-filter="backlog">⚠ Has Backlog</div>
+            <div class="tab prev"   onclick="setFilter('seasonal',this)" data-filter="seasonal">✡️ Seasonal</div>
+            <div class="tab"        onclick="setFilter('fillin',this)" data-filter="fillin">🔄 Fill-ins</div>
+          </div>
+          <button class="btn-select-all" onclick="selectAllVisible()">☑ Select All Visible</button>
+          <button class="btn-export" onclick="exportExcel()">⬇ Export</button>
+          <button onclick="markLoadDone()"
+            style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;
+              border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;
+              font-family:'Inter',sans-serif;display:flex;align-items:center;gap:5px"
+            title="Save current qtys / checked items as a completed load">
+            🚢 Load Done
+          </button>
+          <button onclick="if(completedOrders.length) showCompletedLoads(); else alert('No loads yet — enter quantities or check items and click Load Done first.')"
+            style="background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3);
+              border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;
+              font-family:'Inter',sans-serif"
+            title="View and manage completed loads">
+            📋 Loads <span id="loads-badge" style="display:none;background:#3b82f6;color:white;
+              border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px">0</span>
+          </button>
+          <button onclick="resetColOrder()" style="background:none;border:1.5px solid var(--border);color:var(--ink3);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif" title="Reset column order">↺ Columns</button>
+        </div>
+      </div>
+      <div class="results-scroll-area">
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="col-header-row"></tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      </div>
+    </div>
+    <div id="empty-state" class="empty">
+      <div class="icon">⬆️</div>
+      <p>Upload your <strong>Sales Summary</strong> and <strong>In-Stock</strong> files in the sidebar,<br>then click <strong>Run Analysis</strong>.</p>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+</div><!-- /page-order -->
+
+
+<!-- ════════════════════════════ PAGE: ANALYSIS ════════════════════════════ -->
+<div class="page" id="page-analysis">
+<div class="content">
+
+  <!-- Summary cards -->
+  <div class="summary-row" id="analysis-cards" style="margin-bottom:18px">
+    <div class="stat-card"><div class="val" id="an-slow">—</div><div class="lbl">🐢 Slow Movers</div></div>
+    <div class="stat-card warn"><div class="val" id="an-over">—</div><div class="lbl">📦 Overstock</div></div>
+    <div class="stat-card trend"><div class="val" id="an-new">—</div><div class="lbl">✨ New Items</div></div>
+    <div class="stat-card ok"><div class="val" id="an-conc">—</div><div class="lbl">⚠ Concentrated</div></div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="results-header">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 id="analysis-title">Inventory Analysis</h2>
+      <input type="text" id="item-search-analysis" placeholder="🔍 Item #..."
+        oninput="renderAnalysisTable()"
+        style="padding:5px 10px;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;
+          font-size:12px;background:rgba(255,255,255,.92);color:#1a2e44;outline:none;width:140px;
+          font-family:'Inter',sans-serif;font-weight:500"
+        title="Search by item number">
+    </div>
+    <div class="filter-tabs">
+      <div class="tab active" onclick="setAnalysisFilter('all',this)" data-af="all">All</div>
+      <div class="tab" onclick="setAnalysisFilter('slow',this)" data-af="slow">🐢 Slow Movers</div>
+      <div class="tab warn" onclick="setAnalysisFilter('over',this)" data-af="over">📦 Overstock</div>
+      <div class="tab trend" onclick="setAnalysisFilter('new',this)" data-af="new">✨ New Items</div>
+      <div class="tab" style="border-color:#ef4444;color:#ef4444" onclick="setAnalysisFilter('conc',this)" data-af="conc">⚠ Concentrated</div>
+    </div>
+    <button class="btn-export" onclick="exportAnalysis()">⬇ Export</button>
+  </div>
+
+  <!-- Table -->
+  <div class="results-scroll-area"><div class="table-wrap">
+    <table>
+      <thead><tr id="analysis-header-row">
+        <th>Item No</th>
+        <th>Description</th>
+        <th>Vendor</th>
+        <th class="num">Monthly Rate</th>
+        <th class="num">Coverage (mo)</th>
+        <th class="num">Days Since Sale</th>
+        <th class="num">Total Sold</th>
+        <th>Flags</th>
+      </tr></thead>
+      <tbody id="analysis-body">
+        <tr><td colspan="8" style="text-align:center;padding:60px;color:var(--ink3)">
+          Run Analysis on the Order Analysis tab first to populate this view.
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div></div>
+</div><!-- /page-analysis -->
+
+<!-- ════════════════════════════ PAGE: CALENDAR ════════════════════════════ -->
+<div class="page" id="page-calendar">
+<div class="cal-wrap">
+  <div class="cal-hero">
+    <div class="star">✡️</div>
+    <div>
+      <h2>Jewish Holiday Peak Season Planner</h2>
+      <p>Each holiday shows the Gregorian date, days until it arrives, and your peak purchasing window. Enable the holidays relevant to your business — the Order Analysis page will flag seasonal items and apply a demand multiplier based on prior year sales spikes.</p>
+    </div>
+  </div>
+  <div class="cal-legend">
+    <h3>Legend — Days Until Holiday</h3>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>Under 60 days — Order immediately</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f39c12"></div>60–120 days — Plan now</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#22863a"></div>Over 120 days — Monitor</div>
+    </div>
+  </div>
+  <div class="holiday-grid" id="holiday-grid"></div>
+  <div style="text-align:right;margin-bottom:8px">
+  <button onclick="resetHolSettings()" style="background:none;border:1px solid var(--border);color:var(--ink3);padding:5px 12px;border-radius:20px;font-size:11px;cursor:pointer;font-family:Inter,sans-serif">↺ Reset to defaults</button>
+</div>
+<div class="peak-info">
+    <h3>📋 How Seasonal Multipliers Work</h3>
+    <p>When you upload a <strong>prior year dated sales file</strong>, the tool compares each item's sales during the holiday peak window vs. its annual average. If an item sold 2× more during Pesach week, the tool applies a <strong>2× seasonal multiplier</strong> to the order quantity for the upcoming Pesach. This is combined with current year trend data.</p>
+    <div class="peak-note">⏳ Upload a prior year sales file (Item No · Date · QTY) in the sidebar to enable full seasonal multiplier calculations.</div>
+  </div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// JEWISH HOLIDAYS
+// ══════════════════════════════════════════════════════════════════
+// Each holiday has TWO prior dates so we can detect spikes in files
+// covering different date ranges. getPriorPeakMonths() picks the one
+// whose peak window actually falls inside the uploaded file's date range.
+const HOLIDAYS = [
+  {id:'purim',    name:'Purim',        hebrew:'פּוּרִים',
+   date:new Date('2026-03-05'), prior:new Date('2026-03-05'), prior2:new Date('2025-03-14'),
+   color:'#9b59b6',peak:6,enabled:true,  note:'Mishloach manot, hamantaschen, disposables'},
+  {id:'pesach',   name:'Pesach',       hebrew:'פֶּסַח',
+   date:new Date('2026-04-02'), prior:new Date('2026-04-02'), prior2:new Date('2025-04-13'),
+   color:'#e74c3c',peak:8,enabled:true,  note:'Biggest peak — matzah, wine, seder plates, disposables'},
+  {id:'shavuot',  name:'Shavuot',      hebrew:'שָׁבוּעוֹת',
+   date:new Date('2026-05-22'), prior:new Date('2026-05-22'), prior2:new Date('2025-06-02'),
+   color:'#27ae60',peak:4,enabled:true,  note:'Dairy foods, flowers, cheesecake'},
+  {id:'rh5786',   name:'Rosh Hashana', hebrew:'רֹאשׁ הַשָּׁנָה',
+   date:new Date('2026-09-11'), prior:new Date('2025-09-23'), prior2:new Date('2025-09-23'),
+   color:'#e67e22',peak:8,enabled:true,  note:'Apples, honey, round challah, disposables — major peak'},
+  {id:'yk5786',   name:'Yom Kippur',   hebrew:'יוֹם כִּפּוּר',
+   date:new Date('2026-09-20'), prior:new Date('2025-10-02'), prior2:new Date('2025-10-02'),
+   color:'#1F4E79',peak:6,enabled:true,  note:'Break-fast foods, candles, white tablecloths'},
+  {id:'sukkot',   name:'Sukkot',       hebrew:'סֻכּוֹת',
+   date:new Date('2026-09-25'), prior:new Date('2025-10-07'), prior2:new Date('2025-10-07'),
+   color:'#16a085',peak:5,enabled:true,  note:'Sukkah supplies, lulav & etrog, festive foods'},
+  {id:'shmini',   name:'Shmini Atzeret / Simchat Torah', hebrew:'שְׁמִינִי עֲצֶרֶת',
+   date:new Date('2026-10-02'), prior:new Date('2025-10-14'), prior2:new Date('2025-10-14'),
+   color:'#2980b9',peak:3,enabled:false, note:'Festive meals'},
+  {id:'chanukah', name:'Chanukah',     hebrew:'חֲנֻכָּה',
+   date:new Date('2026-12-05'), prior:new Date('2025-12-15'), prior2:new Date('2025-12-15'),
+   color:'#f39c12',peak:6,enabled:true,  note:'Menorahs, oil, latke supplies, gelt, gifts'},
+  {id:'purim27',  name:'Purim 2027',   hebrew:'פּוּרִים',
+   date:new Date('2027-03-24'), prior:new Date('2026-03-05'), prior2:new Date('2026-03-05'),
+   color:'#9b59b6',peak:6,enabled:false, note:'Next year planning'},
+  {id:'pesach27', name:'Pesach 2027',  hebrew:'פֶּסַח',
+   date:new Date('2027-04-22'), prior:new Date('2026-04-02'), prior2:new Date('2026-04-02'),
+   color:'#e74c3c',peak:8,enabled:false, note:'Next year planning'},
+];
+
+const LS_HOL='holiday_settings_v1';
+let holSettings={};
+try{
+  const _savedHol=localStorage.getItem(LS_HOL);
+  if(_savedHol) holSettings=JSON.parse(_savedHol);
+}catch(e){holSettings={};}
+function saveHol(){try{localStorage.setItem(LS_HOL,JSON.stringify(holSettings))}catch(e){}}
+function resetHolSettings(){
+  holSettings={};
+  saveHol();
+  renderHolidays();
+  if(allRows.length>0) runAnalysis();
+}
+
+function renderHolidays(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const grid=document.getElementById('holiday-grid');
+  if(!grid) return;
+  grid.innerHTML=HOLIDAYS.map(h=>{
+    const s=holSettings[h.id]||{};
+    const enabled=s.enabled!==undefined?s.enabled:h.enabled;
+    const peak=s.peak||h.peak;
+    const diff=Math.round((h.date-today)/86400000);
+    const orderBy=new Date(h.date);orderBy.setDate(orderBy.getDate()-peak*7);
+    const orderDiff=Math.round((orderBy-today)/86400000);
+    let cc='fine',ct='';
+    if(diff<0){ct='Passed';}
+    else if(diff<60){cc='soon';ct=diff+' days';}
+    else if(diff<120){cc='medium';ct=diff+' days';}
+    else{cc='fine';ct=diff+' days';}
+    const greg=h.date.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const priorStr=h.prior?h.prior.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}):'—';
+    const ostr=orderBy.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return`<div class="holiday-card" style="--hcol:${h.color};opacity:${diff<0?.55:1}">
+      <div class="hc-head"><div><div class="hc-name">${h.name}</div><div style="font-size:12px;color:#888">${h.hebrew}</div></div>
+      <span class="countdown-badge ${cc}">${ct}</span></div>
+      <div class="hc-greg">📅 ${greg}</div>
+      <div style="font-size:10px;color:#9aabbc;margin-bottom:6px">📊 Prior year: ${priorStr}</div>
+      <div style="font-size:11px;color:#6b7a8d;margin-bottom:7px">${h.note}</div>
+      <div class="hc-days">Peak window: <span>${peak} weeks</span> before holiday${diff>=0?` · Order by: <strong style="color:${orderDiff<0?'#c0391b':'#1F4E79'}">${ostr}</strong>`:''}
+      </div>
+      <div class="hc-controls">
+        <label>Peak weeks:</label>
+        <input type="number" min="1" max="16" value="${peak}" onchange="updateHol('${h.id}','peak',this.value)">
+        <div class="hc-toggle"><input type="checkbox" ${enabled?'checked':''} onchange="updateHol('${h.id}','enabled',this.checked)">
+        <span>Track</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateHol(id,f,v){
+  if(!holSettings[id])holSettings[id]={};
+  if(f==='enabled')holSettings[id].enabled=v;
+  if(f==='peak')holSettings[id].peak=parseInt(v)||6;
+  saveHol();renderHolidays();
+}
+
+function getActiveHolidays(){
+  const today=new Date();today.setHours(0,0,0,0);
+  return HOLIDAYS.filter(h=>{
+    const s=holSettings[h.id]||{};
+    const en=s.enabled!==undefined?s.enabled:h.enabled;
+    return en&&h.date>=today;
+  }).map(h=>({
+    id:h.id, name:h.name, hebrew:h.hebrew,
+    date:h.date, prior:h.prior, prior2:h.prior2,
+    color:h.color, note:h.note,
+    peak:holSettings[h.id]?.peak||h.peak,
+    enabled:h.enabled
+  }));
+}
+
+function getSoonHolidays(days=365){
+  const today=new Date();today.setHours(0,0,0,0);
+  return getActiveHolidays().filter(h=>Math.round((h.date-today)/86400000)<=days&&Math.round((h.date-today)/86400000)>=0);
+}
+
+function getPriorPeakMonths(h){
+  // Get M/YYYY keys for the peak window before a prior-year holiday date
+  const pd = h.prior || h.date;
+  const endY = pd.getUTCFullYear();
+  const endMo = pd.getUTCMonth(); // 0-indexed
+  const peakMonths = Math.round((h.peak||6) * 7 / 30);
+  const keys = [];
+  let y = endY, mo = endMo - peakMonths;
+  while(mo < 0){ mo += 12; y--; }
+  for(let i = 0; i < 13; i++){
+    if(y > endY || (y === endY && mo > endMo)) break;
+    keys.push((mo+1) + '/' + y);
+    mo++;
+    if(mo > 11){ mo = 0; y++; }
+  }
+  return [...new Set(keys)];
+}
+
+
+
+
+
+
+// ══════════════════════════════════════════════════════════════════
+// PERSISTENT VENDOR SETTINGS
+// ══════════════════════════════════════════════════════════════════
+const LS_KEY='vendor_settings_v1';
+let vendorSettings={};
+try{vendorSettings=JSON.parse(localStorage.getItem(LS_KEY)||'{}')}catch(e){}
+function saveLS(){try{localStorage.setItem(LS_KEY,JSON.stringify(vendorSettings))}catch(e){}}
+
+const CBM_KEY='cbm_data_v1';
+let cbmData={};
+try{cbmData=JSON.parse(localStorage.getItem(CBM_KEY)||'{}')}catch(e){}
+function saveCBM(){try{localStorage.setItem(CBM_KEY,JSON.stringify(cbmData))}catch(e){}}
+
+const FILLIN_KEY='fillin_map_v1';
+try{const _fi=localStorage.getItem(FILLIN_KEY);if(_fi)fillInMap=JSON.parse(_fi);}catch(e){}
+function saveFillIn(){try{localStorage.setItem(FILLIN_KEY,JSON.stringify(fillInMap))}catch(e){}}
+
+// ══════════════════════════════════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════════════════════════════════
+let stockData=null,fillInData=null,salesDatedData=null;
+let allVendors=[];
+let activeTypeFilter='';
+let allRows=[],activeFilters=new Set(['all']),sortCol=null,sortDir=1;
+// ── IndexedDB for large file storage (no size limit) ─────────────────────
+const IDB_NAME = 'inv_tool_v1';
+const IDB_STORE = 'files';
+let _idb = null;
+
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(_idb){ res(_idb); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => { _idb=e.target.result; res(_idb); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+function idbSave(key, value){
+  return idbOpen().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(value, key);
+    tx.oncomplete = ()=>res();
+    tx.onerror = e=>rej(e.target.error);
+  }));
+}
+
+function idbLoad(key){
+  return idbOpen().then(db => new Promise((res,rej)=>{
+    const req = db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  }));
+}
+
+function idbDelete(key){
+  return idbOpen().then(db => new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = ()=>res();
+    tx.onerror = e=>rej(e.target.error);
+  }));
+}
+
+let salesTrendMap={};
+let fillInMap={};
+let completedOrders=[]; // [{items:[{item,desc,vendor,orderQty,cbm}], totalCbm, totalCtns}]
+let prevYearMap={};
+let salesMap={};
+let selectedForOrder=new Set();
+let selectedRowsCache={};
+
+const EXCLUDE=new Set(['MISC.','PALLETS','DELIVERY','NAN','NAT','']);
+const TYPE_COLORS={Import:'import',Canada:'canada',Local:'local'};
+
+// ── Null-safe DOM helpers ─────────────────────────────────────────
+function safeSet(id, prop, val){
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(prop==='textContent') el.textContent=val;
+  else if(prop==='value') el.value=val;
+  else if(prop==='display') el.style.display=val;
+  else if(prop==='addClass') el.classList.add(val);
+  else if(prop==='removeClass') el.classList.remove(val);
+}
+
+function findCol(obj,kw){
+  return Object.keys(obj||{}).find(k=>k.toLowerCase().replace(/[^a-z]/g,'').includes(kw.replace(/[^a-z]/g,'')));
+}
+
+function readXlsx(file, cardId){
+  return new Promise((res,rej)=>{
+    const card = cardId ? document.getElementById(cardId) : null;
+    const progressWrap = card ? card.querySelector('.upload-progress') : null;
+    const progressFill = card ? card.querySelector('.upload-progress-fill') : null;
+    const progressLabel = card ? card.querySelector('.upload-progress-label') : null;
+
+    // Show loading state immediately
+    if(card){ card.classList.add('uploading'); }
+    if(progressWrap) progressWrap.style.display='block';
+    if(progressLabel) progressLabel.textContent='Reading file...';
+    if(progressFill) progressFill.style.width='10%';
+
+    const reader=new FileReader();
+    reader.onprogress=e=>{
+      if(e.lengthComputable && progressFill){
+        const pct=Math.round((e.loaded/e.total)*70)+10; // 10–80%
+        progressFill.style.width=pct+'%';
+        progressLabel.textContent='Loading... '+Math.round(e.loaded/1024)+'KB';
+      }
+    };
+    reader.onload=e=>{
+      if(progressFill) progressFill.style.width='85%';
+      if(progressLabel) progressLabel.textContent='Parsing rows...';
+      // Use setTimeout to let the UI update before heavy parsing
+      setTimeout(()=>{
+        try{
+          const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          let rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+          if(rows.length&&Object.keys(rows[0]).some(k=>k.startsWith('Unnamed')||k==='__EMPTY')){
+            const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            const hdrs=raw[0].map(h=>String(h).trim());
+            rows=raw.slice(1).map(row=>{const o={};hdrs.forEach((h,i)=>{if(h)o[h]=row[i]??'';});return o;});
+          }
+          if(progressFill) progressFill.style.width='100%';
+          if(progressLabel) progressLabel.textContent='Done — '+rows.length.toLocaleString()+' rows';
+          if(card){ card.classList.remove('uploading'); }
+          setTimeout(()=>{ if(progressWrap) progressWrap.style.display='none'; }, 2000);
+          res(rows);
+        }catch(err){
+          if(card){ card.classList.remove('uploading'); }
+          if(progressWrap) progressWrap.style.display='none';
+          rej(err);
+        }
+      }, 10);
+    };
+    reader.onerror=()=>{
+      if(card){ card.classList.remove('uploading'); }
+      if(progressWrap) progressWrap.style.display='none';
+      rej(new Error('Failed to read file'));
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function handleFile(type,input){
+  const file=input.files[0];if(!file)return;
+  try{
+    const cardId=type==='stock'?'card-stock':type==='salesdated'?'card-sales-dated':type==='fillin'?'card-fillin':null;
+    const rows=await readXlsx(file, cardId);
+    if(type==='stock'){
+      stockData=rows;
+      document.getElementById('stock-name').textContent='✓ '+file.name;
+      document.getElementById('card-stock').classList.add('loaded');
+      extractVendors(rows);
+      localStorage.setItem('stock_name_v1', file.name);
+      idbSave('stock_data_v1', rows).catch(e=>console.warn('stock idb save:',e));
+    } else if(type==='salesdated'){
+      salesDatedData=rows;
+      document.getElementById('salesdated-name').textContent='✓ '+file.name;
+      document.getElementById('card-sales-dated').classList.add('loaded');
+      localStorage.setItem('sales_name_v1', file.name);
+      idbSave('sales_data_v1', rows).catch(e=>console.warn('sales idb save:',e));
+      try{
+        buildSalesTrendMap(rows); // full data for trend; date filter applied at analysis time
+        window._salesDatedFull = rows; // keep full data for re-filtering
+        const mColD=Object.keys(rows[0]||{}).find(k=>/^month$/i.test(k))||null;
+        if(mColD){
+          const uniqueMonths=new Set(rows.map(r=>{
+            const v=r[mColD];
+            if(v instanceof Date) return (v.getUTCMonth()+1)+'/'+v.getUTCFullYear();
+            return String(v||'').trim();
+          }).filter(Boolean));
+          const mCount=uniqueMonths.size;
+          if(mCount>0) document.getElementById('months').value=mCount;
+          showSbStatus('status',`✓ ${mCount} months loaded`,'#4ade80');
+          // Populate date range dropdowns
+          populateDateDropdowns([...uniqueMonths]);
+        } else {
+          showSbStatus('status','✓ Sales file loaded','#4ade80');
+        }
+      }catch(buildErr){
+        console.error('buildSalesTrendMap error:',buildErr);
+        showSbStatus('status','⚠ Sales loaded but trend analysis failed: '+buildErr.message,'#fbbf24');
+      }
+    } else if(type==='fillin'){
+      fillInData=rows;
+      document.getElementById('fillin-name').textContent='✓ '+file.name;
+      document.getElementById('card-fillin').classList.add('loaded');
+      buildFillInMap(rows);
+      saveFillIn();
+      localStorage.setItem('fillin_name_v1', file.name);
+      idbSave('fillin_data_v1', rows).catch(e=>console.warn('fillin idb save:',e));
+      showSbStatus('fillin-status',`✓ ${Object.keys(fillInMap).length} fill-in mappings loaded`,'#4ade80');
+    }
+  }catch(err){
+    setStatus('Error reading file: '+err.message);
+    console.error('handleFile error:',err);
+  } finally {
+    checkReady(); // Always check — even if an error occurred
+  }
+}
+
+function checkReady(){document.getElementById('btn-run').disabled=!(salesDatedData&&stockData);}
+
+// ══════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+  if(id==='calendar')renderHolidays();
+}
+function toggleSB(id){
+  const b=document.getElementById(id);
+  if(b) b.classList.toggle('hidden');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BUILD SALES TREND MAP — compare recent 3 months vs earlier months
+// Requires dated sales file with Month column (M/YYYY format)
+// ══════════════════════════════════════════════════════════════════
+function buildSalesTrendMapFiltered(filteredRows){
+  // Rebuild trend map using only date-filtered rows
+  buildSalesTrendMap(filteredRows);
+}
+
+function buildSalesTrendMap(rows){
+  salesTrendMap={};
+  if(!rows.length) return;
+  const s=rows[0]||{};
+  const iCol=findCol(s,'itemno')||Object.keys(s).find(k=>/item/i.test(k))||'Itemno';
+  const qCol=findCol(s,'qty')||'QTY';
+  const mCol=Object.keys(s).find(k=>/^month$/i.test(k))||findCol(s,'date')||null;
+  // Customer columns
+  const codeCol=Object.keys(s).find(k=>/^code$/i.test(k))||Object.keys(s).find(k=>/customer.*code|cust.*id/i.test(k))||null;
+  const nameCol=Object.keys(s).find(k=>/^name$/i.test(k))||Object.keys(s).find(k=>/customer.*name|cust.*name/i.test(k))||null;
+  if(!mCol){ console.warn('No Month column found in dated sales file'); return; }
+
+  // Build per-item monthly breakdown + customer breakdown
+  const itemMonths={};
+  const itemCustomers={}; // { item: { custCode: { name, recentQty, olderQty, totalQty } } }
+  for(const row of rows){
+    const item=String(row[iCol]||'').trim().toUpperCase();
+    if(EXCLUDE.has(item)||!item) continue;
+    const qty=parseFloat(row[qCol])||0;
+    if(qty<=0) continue;
+    let mo=row[mCol];
+    if(mo instanceof Date){
+      mo=(mo.getUTCMonth()+1)+'/'+mo.getUTCFullYear();
+    } else {
+      mo=String(mo||'').trim();
+      const isoMatch=mo.match(/^(\d{4})-(\d{2})/);
+      if(isoMatch) mo=parseInt(isoMatch[2])+'/'+isoMatch[1];
+    }
+    if(!mo) continue;
+    if(!itemMonths[item]) itemMonths[item]={};
+    itemMonths[item][mo]=(itemMonths[item][mo]||0)+qty;
+    // Track customer
+    if(codeCol){
+      const code=String(row[codeCol]||'').trim()||'Unknown';
+      const name=nameCol?String(row[nameCol]||'').trim():'';
+      if(!itemCustomers[item]) itemCustomers[item]={};
+      if(!itemCustomers[item][code]) itemCustomers[item][code]={name,totalQty:0,monthlyQty:{}};
+      itemCustomers[item][code].totalQty+=qty;
+      itemCustomers[item][code].monthlyQty[mo]=(itemCustomers[item][code].monthlyQty[mo]||0)+qty;
+    }
+  }
+
+  // Sort all months chronologically and split recent 3 vs older
+  // Pre-compute holiday peak month keys ONCE (not per item)
+  // These are excluded from velocity trend to avoid holiday spikes inflating the trend
+  const allHolPeakMonths=new Set();
+  HOLIDAYS.forEach(h=>{
+    const s=holSettings[h.id]||{};
+    const en=s.enabled!==undefined?s.enabled:h.enabled;
+    if(!en) return;
+    [h.prior,h.prior2].filter(Boolean).forEach(pd=>{
+      // Use UTC to avoid timezone shifting
+      const endY=pd.getUTCFullYear(), endMo=pd.getUTCMonth();
+      const peakMonths=Math.ceil((h.peak||6)*7/30);
+      let _y=endY, _mo=endMo-peakMonths;
+      while(_mo<0){_mo+=12;_y--;}
+      for(let _i=0;_i<13;_i++){
+        if(_y>endY||(_y===endY&&_mo>endMo)) break;
+        allHolPeakMonths.add((_mo+1)+'/'+_y);
+        _mo++;if(_mo>11){_mo=0;_y++;}
+      }
+    });
+  });
+
+  // Sort all months chronologically and split recent vs older
+  for(const [item, moMap] of Object.entries(itemMonths)){
+    // Sort months: parse M/YYYY into sortable date
+    const sorted=Object.entries(moMap).sort((a,b)=>{
+      const pa=a[0].split('/'), pb=b[0].split('/');
+      return new Date(pa[1],pa[0]-1) - new Date(pb[1],pb[0]-1);
+    });
+    if(sorted.length < 2) continue; // need at least 2 months to compare
+
+    // Split into recent (last 3) vs older, but tag holiday months
+    const recentCount = Math.min(3, Math.floor(sorted.length/2));
+    const recent  = sorted.slice(-recentCount);
+    const older   = sorted.slice(0, sorted.length-recentCount);
+
+    // For velocity trend, exclude months that are holiday peaks
+    // Use non-holiday months for a cleaner comparison
+    const recentNonHol = recent.filter(([mo])=>!allHolPeakMonths.has(mo));
+    const olderNonHol  = older.filter(([mo])=>!allHolPeakMonths.has(mo));
+    // Only use non-holiday months if we have enough; otherwise fall back to all months
+    const recentForTrend = recentNonHol.length>=1 ? recentNonHol : recent;
+    const olderForTrend  = olderNonHol.length>=1  ? olderNonHol  : older;
+    const recentHolMonths = recent.filter(([mo])=>allHolPeakMonths.has(mo)).map(([mo])=>mo);
+    if(!older.length) continue;
+    const recentRate = recentForTrend.reduce((s,[,v])=>s+v,0) / recentForTrend.length;
+    const olderRate  = olderForTrend.reduce((s,[,v])=>s+v,0)  / olderForTrend.length;
+    const trendPct   = olderRate>0 ? Math.round((recentRate/olderRate-1)*100) : 0;
+    // Flag as trending if recent rate is 20%+ above older rate
+    // Build monthlyQty map for bar chart display
+    const monthlyQty={};
+    [...recent,...older].forEach(([mo,val])=>{ monthlyQty[mo]=val; });
+
+    // Build customer summary: split qty into recent vs older
+    const recentSet=new Set(recent.map(([m])=>m));
+    const olderSet=new Set(older.map(([m])=>m));
+    const custSummary=[];
+    if(itemCustomers[item]){
+      for(const [code,cdata] of Object.entries(itemCustomers[item])){
+        let recentQty=0,olderQty=0;
+        for(const [mo,qty] of Object.entries(cdata.monthlyQty)){
+          if(recentSet.has(mo)) recentQty+=qty;
+          else if(olderSet.has(mo)) olderQty+=qty;
+        }
+        custSummary.push({code,name:cdata.name,totalQty:cdata.totalQty,recentQty,olderQty});
+      }
+      custSummary.sort((a,b)=>b.recentQty-a.recentQty);
+    }
+
+    salesTrendMap[item]={
+      recentRate:   parseFloat(recentRate.toFixed(1)),
+      olderRate:    parseFloat(olderRate.toFixed(1)),
+      trendPct,
+      trending:     trendPct >= 20,
+      recentMonths: recent.map(([m])=>m),
+      olderMonths:  older.map(([m])=>m),
+      recentHolMonths,  // months excluded from trend as holiday peaks
+      monthlyQty,
+      customers:    custSummary,
+    };
+  }
+    console.log('Trend map built for',Object.keys(salesTrendMap).length,'items');
+
+  // ── Build prevYearMap from the SAME file ─────────────────────────
+  // Store by M/YYYY key so we can distinguish Apr 2025 from Apr 2026
+  prevYearMap={};
+  const fileMonthYearKeys=new Set(); // track which M/YYYY keys exist in file
+  for(const [item, moMap] of Object.entries(itemMonths)){
+    let total=0;
+    const byMonthYear={};
+    for(const [mo, qty] of Object.entries(moMap)){
+      total+=qty;
+      byMonthYear[mo]=(byMonthYear[mo]||0)+qty;
+      fileMonthYearKeys.add(mo);
+    }
+    prevYearMap[item]={total, avgMonthly:total/12, byMonthYear};
+  }
+  // Store the file's available M/YYYY keys globally for getPriorPeakMonths
+  window._fileMonthYearKeys=fileMonthYearKeys;
+  try{localStorage.setItem('fileMonthYearKeys_v2',JSON.stringify([...fileMonthYearKeys]));}catch(e){}
+  try{localStorage.setItem('prevYearMap_v2',JSON.stringify(prevYearMap));}catch(e){}
+  window._allFileKeys=null; // reset so getPriorPeakMonths rebuilds from new prevYearMap
+  console.log('Seasonal map built for',Object.keys(prevYearMap).length,'items, months:',fileMonthYearKeys.size);
+
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BUILD FILL-IN MAP  { 'MAIN': ['F1','F2'] }
+// ══════════════════════════════════════════════════════════════════
+function buildFillInMap(rows){
+  fillInMap={};
+  if(!rows.length)return;
+  const keys=Object.keys(rows[0]);
+  const mainCol=keys[0], fill1Col=keys[1], fill2Col=keys[2]||null;
+  for(const row of rows){
+    const main=String(row[mainCol]||'').trim().toUpperCase();
+    if(!main)continue;
+    const fills=[];
+    const f1=String(row[fill1Col]||'').trim().toUpperCase();if(f1)fills.push(f1);
+    if(fill2Col){const f2=String(row[fill2Col]||'').trim().toUpperCase();if(f2)fills.push(f2);}
+    fillInMap[main]=fills;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VENDORS
+// ══════════════════════════════════════════════════════════════════
+function extractVendors(rows){
+  const vc=findCol(rows[0]||{},'vendor');if(!vc)return;
+  allVendors=[...new Set(rows.map(r=>String(r[vc]||'').trim()).filter(v=>v&&v!=='Vendor'))].sort();
+  renderVendorDropdown();
+  renderSavedTags();
+}
+// Track current visible vendor list
+let _vendorListFiltered = [];
+let _highlightIdx = -1;
+
+function renderVendorDropdown(){
+  // Rebuild filtered list based on type filter
+  _vendorListFiltered = activeTypeFilter
+    ? allVendors.filter(v=>(vendorSettings[v]?.type||'')===activeTypeFilter)
+    : allVendors;
+  // If current selection no longer in list, clear it
+  const cur = document.getElementById('vendor-filter').value;
+  if(cur && !_vendorListFiltered.includes(cur)){
+    document.getElementById('vendor-filter').value='';
+    document.getElementById('vendor-search').value='';
+    onVendorChange();
+  }
+  // Rebuild the visible list (apply any existing search)
+  renderVendorList(document.getElementById('vendor-search').value || '');
+}
+
+function renderVendorList(query){
+  const q = query.trim().toLowerCase();
+  const list = document.getElementById('vendor-list');
+  const cur = document.getElementById('vendor-filter').value;
+  _highlightIdx = -1;
+
+  const matches = q
+    ? _vendorListFiltered.filter(v=>v.toLowerCase().includes(q))
+    : _vendorListFiltered;
+
+  // Always prepend "All Vendors" when no query
+  const allOpt = q ? '' : `<div class="vendor-opt${cur===''?' selected':''}"
+    data-value=""
+    onmousedown="clearVendorSearch()"
+    onmouseover="highlightVendorOpt(this)"
+  >All Vendors <span style="font-size:10px;opacity:.5">(${_vendorListFiltered.length})</span></div>`;
+
+  if(!matches.length){
+    list.innerHTML = allOpt + '<div class="vendor-no-results">No vendors match "'+q+'"</div>';
+    return;
+  }
+
+  list.innerHTML = allOpt + matches.map((v,i)=>{
+    const isSelected = v === cur;
+    // Highlight matching text
+    let label = v;
+    if(q){
+      const idx = v.toLowerCase().indexOf(q);
+      if(idx>=0) label = v.slice(0,idx)+'<mark>'+v.slice(idx,idx+q.length)+'</mark>'+v.slice(idx+q.length);
+    }
+    return `<div class="vendor-opt${isSelected?' selected':''}"
+      data-value="${v}"
+      onmousedown="selectVendor('${v.replace(/'/g,"\'")}')"
+      onmouseover="highlightVendorOpt(this)"
+    >${label}</div>`;
+  }).join('');
+}
+
+function filterVendorList(){
+  const q = document.getElementById('vendor-search').value;
+  showVendorDropdown();
+  renderVendorList(q);
+}
+
+function showVendorDropdown(){
+  const dd = document.getElementById('vendor-dropdown');
+  dd.style.display = 'block';
+  renderVendorList(document.getElementById('vendor-search').value || '');
+}
+
+function hideVendorDropdown(){
+  document.getElementById('vendor-dropdown').style.display = 'none';
+}
+
+function selectVendor(v){
+  document.getElementById('vendor-filter').value = v;
+  document.getElementById('vendor-search').value = '';  // keep clear so user can search next
+  hideVendorDropdown();
+  renderVendorBadge(v);
+  onVendorChange();
+}
+
+function renderVendorBadge(v){
+  const b = document.getElementById('vendor-badge');
+  if(!b) return;
+  if(v){ b.style.display='flex'; document.getElementById('vendor-badge-text').textContent=v; }
+  else  { b.style.display='none'; }
+}
+
+function clearVendorSearch(){
+  document.getElementById('vendor-filter').value = '';
+  document.getElementById('vendor-search').value = '';
+  hideVendorDropdown();
+  renderVendorBadge('');
+  onVendorChange();
+}
+
+function highlightVendorOpt(el){
+  document.querySelectorAll('.vendor-opt').forEach(o=>o.classList.remove('highlighted'));
+  el.classList.add('highlighted');
+  const opts = document.querySelectorAll('.vendor-opt[data-value]');
+  _highlightIdx = [...opts].indexOf(el);
+}
+
+function vendorSearchKeydown(e){
+  const dd = document.getElementById('vendor-dropdown');
+  const opts = [...document.querySelectorAll('.vendor-opt[data-value]')];
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(dd.style.display==='none') showVendorDropdown();
+    _highlightIdx = Math.min(_highlightIdx+1, opts.length-1);
+    opts.forEach((o,i)=>o.classList.toggle('highlighted',i===_highlightIdx));
+    if(opts[_highlightIdx]) opts[_highlightIdx].scrollIntoView({block:'nearest'});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    _highlightIdx = Math.max(_highlightIdx-1, 0);
+    opts.forEach((o,i)=>o.classList.toggle('highlighted',i===_highlightIdx));
+    if(opts[_highlightIdx]) opts[_highlightIdx].scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(_highlightIdx>=0 && opts[_highlightIdx]){
+      selectVendor(opts[_highlightIdx].dataset.value);
+    }
+  } else if(e.key==='Escape'){
+    hideVendorDropdown();
+    // Clear to show all if escape
+    if(document.getElementById('vendor-filter').value===''){
+      document.getElementById('vendor-search').value='';
+    }
+  } else if(e.key==='Backspace'){
+    // If user clears the input, reset selection
+    const val = document.getElementById('vendor-search').value;
+    if(val.length<=1){
+      document.getElementById('vendor-filter').value='';
+      onVendorChange();
+    }
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#vendor-search') && !e.target.closest('#vendor-dropdown')){
+    hideVendorDropdown();
+    // If search box has text but no valid selection, clear it
+    const sel = document.getElementById('vendor-filter').value;
+    const search = document.getElementById('vendor-search').value;
+    if(!sel && search) document.getElementById('vendor-search').value='';
+  }
+});
+function setTypeFilter(type,el){
+  activeTypeFilter=type;
+  document.querySelectorAll('.sb-pill').forEach(p=>{
+    p.className='sb-pill';
+    if(p.dataset.type===type)p.className='sb-pill '+(type===''?'active-all':'active-'+type.toLowerCase());
+  });
+  renderVendorDropdown();
+  // Auto re-run if we already have results
+  if(allRows.length>0) runAnalysis();
+}
+function onVendorChange(){
+  const v=document.getElementById('vendor-filter').value;
+  const row=document.getElementById('vendor-settings');
+  if(v){
+    const searchEl=document.getElementById('vendor-search');
+    if(searchEl) searchEl.value=v;
+    row.style.display='block';
+    document.getElementById('vs-vendor-name').textContent=v;
+    const s=vendorSettings[v]||{};
+    document.getElementById('vs-type').value=s.type||'';
+    document.getElementById('vs-leadtime').value=s.lt||3.5;
+    document.getElementById('saved-badge').style.display='none';
+  }else{row.style.display='none';}
+  // Auto re-run if we already have results
+  if(allRows.length>0) runAnalysis();
+}
+function saveVendorSettings(){
+  const v=document.getElementById('vendor-filter').value;if(!v)return;
+  vendorSettings[v]={type:document.getElementById('vs-type').value,lt:parseFloat(document.getElementById('vs-leadtime').value)||3.5};
+  saveLS();
+  const b=document.getElementById('saved-badge');b.style.display='block';setTimeout(()=>b.style.display='none',2000);
+  renderVendorDropdown();renderSavedTags();
+  document.getElementById('vendor-filter').value=v;
+  document.getElementById('vendor-search').value=v;
+}
+function renderSavedTags(){
+  const entries=Object.entries(vendorSettings);
+  document.getElementById('saved-tags-row').innerHTML=entries.length?entries.slice(0,8).map(([v,s])=>{
+    const tc=TYPE_COLORS[s.type]||'';
+    const short=v.length>16?v.slice(0,14)+'…':v;
+    return`<span class="sb-tag ${tc}" title="${v} · ${s.type||'?'} · ${s.lt}mo">${short} ${s.lt}mo</span>`;
+  }).join(''):'';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SEASONAL MULTIPLIER
+// Looks at prior year sales in the upcoming holiday's peak window
+// vs. the item's annual average
+// ══════════════════════════════════════════════════════════════════
+// Minimum multiplier to be considered a real spike
+const SPIKE_THRESHOLD = 1.30; // 30% above average
+
+// Get the months covered by a holiday's peak window using the PRIOR year date
+
+
+function getSeasonalMultiplier(item, soonHolidays){
+  const pym = prevYearMap[item];
+  if(!pym || !pym.byMonthYear || !pym.avgMonthly) return {mult:1, holiday:null};
+
+  let bestMult = 1, bestHol = null;
+  for(const h of soonHolidays){
+    const keys = getPriorPeakMonths(h);
+    if(!keys.length) continue;
+    const peakQty = keys.reduce((s, k) => s + (pym.byMonthYear[k] || 0), 0);
+    if(!peakQty) continue;
+    const peakAvg = peakQty / keys.length;
+    const mult = peakAvg / pym.avgMonthly;
+    if(mult >= SPIKE_THRESHOLD && mult > bestMult){
+      bestMult = mult;
+      bestHol = h;
+    }
+  }
+  return {mult: parseFloat(bestMult.toFixed(2)), holiday: bestHol};
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MAIN ANALYSIS
+// ══════════════════════════════════════════════════════════════════
+function runAnalysis(){
+  setStatus('');
+  // months is now computed from date range below
+  const selectedVendor=document.getElementById('vendor-filter').value;
+  const fallbackLT=3.5;
+  const soonHolidays=getSoonHolidays(365);
+
+  // ── Sales: build map item → qty ──
+  if(!salesDatedData||!salesDatedData.length){setStatus('⚠ Please upload a Sales with Dates file.');return;}
+  // Build salesMap from dated file — sum all QTY per item
+  const s0=salesDatedData[0]||{};
+  const iColS=findCol(s0,'itemno')||Object.keys(s0).find(k=>/item/i.test(k))||'Itemno';
+  const qColS=findCol(s0,'qty')||'QTY';
+  const dColS=findCol(s0,'desc')||'Desc';
+  salesMap={};const descMap={};
+  // Get date range filter
+  const mColD2=Object.keys(s0).find(k=>/^month$/i.test(k))||null;
+  const dateFrom=document.getElementById('date-from').value;
+  const dateTo=document.getElementById('date-to').value;
+  let filteredSales=salesDatedData;
+  if(mColD2&&(dateFrom||dateTo)){
+    filteredSales=salesDatedData.filter(row=>{
+      const rv=row[mColD2];
+      let ms='';
+      if(rv instanceof Date) ms=(rv.getUTCMonth()+1)+'/'+rv.getUTCFullYear();
+      else ms=String(rv||'').trim();
+      if(!ms) return true;
+      const [mm,yy]=ms.split('/').map(Number);
+      if(!mm||!yy) return true;
+      const rowVal=yy*100+mm;
+      let ok=true;
+      if(dateFrom){const [fm,fy]=dateFrom.split('/').map(Number);ok=ok&&rowVal>=fy*100+fm;}
+      if(dateTo){const [tm,ty]=dateTo.split('/').map(Number);ok=ok&&rowVal<=ty*100+tm;}
+      return ok;
+    });
+  }
+  // Recalculate months from filtered date range
+  const hiddenMonths=parseFloat(document.getElementById('months').value)||12;
+  let effectiveMonths=hiddenMonths;
+  if(dateFrom&&dateTo){
+    const[fm,fy]=dateFrom.split('/').map(Number);
+    const[tm,ty]=dateTo.split('/').map(Number);
+    effectiveMonths=Math.max(1,(ty-fy)*12+(tm-fm)+1);
+  } else if(dateFrom&&!dateTo){
+    const[fm,fy]=dateFrom.split('/').map(Number);
+    const now=new Date();
+    effectiveMonths=Math.max(1,(now.getFullYear()-fy)*12+(now.getMonth()+1-fm)+1);
+  }
+  const months=effectiveMonths;
+  for(const row of filteredSales){
+    const item=String(row[iColS]||'').trim().toUpperCase();
+    if(EXCLUDE.has(item)||!item)continue;
+    const qty=parseFloat(row[qColS])||0;
+    if(qty<=0)continue;
+    salesMap[item]=(salesMap[item]||0)+qty;
+    if(!descMap[item])descMap[item]=String(row[dColS]||'');
+  }
+
+  // ── Stock map ──
+  const st0=stockData[0]||{};
+  const iColSt=findCol(st0,'itemno')||'Itemno';
+  const vColSt=findCol(st0,'vendor')||'Vendor';
+  const dColSt=findCol(st0,'desc')||'Desc';
+  const cColSt=findCol(st0,'subcategory')||'SubCategory';
+  const stockMap={};
+  for(const row of stockData){
+    const item=String(row[iColSt]||'').trim().toUpperCase();
+    if(!item||item==='ITEMNO')continue;
+    const vendor=String(row[vColSt]||'').trim();
+    if(selectedVendor&&vendor.toUpperCase()!==selectedVendor.toUpperCase())continue;
+    if(!selectedVendor&&activeTypeFilter&&(vendorSettings[vendor]?.type||'')!==activeTypeFilter)continue;
+    const avail=(parseFloat(row['Available'])||0)+(parseFloat(row['Available2'])||0)+(parseFloat(row['Available3'])||0);
+    // Customer orders are ALREADY deducted from Available — track separately for display only
+    const custOrders=(parseFloat(row['On Order'])||0)+(parseFloat(row['Onorder2'])||0)+(parseFloat(row['OnOrder3'])||0);
+    // Vendor orders = stock coming IN from your supplier
+    const vendorOrder=(parseFloat(row['VendOrder'])||0);
+    const lt=vendorSettings[vendor]?.lt||fallbackLT;
+    const vtype=vendorSettings[vendor]?.type||'';
+    // Net position = what's available now + what's coming from vendor
+    // avail can be negative if customer orders exceed on-hand (backlog)
+    const netPosition=avail+vendorOrder;
+    const backlog=Math.max(0,-avail);
+    stockMap[item]={desc:String(row[dColSt]||''),cat:String(row[cColSt]||''),vendor,
+      avail,custOrders,vendorOrder,netPosition,backlog,lt,vtype};
+  }
+
+  // ── Compute fill-in boosted sales ──
+  // For each main item, add its fill-in sales
+  const boostedSalesMap={...salesMap};
+  for(const [main,fills] of Object.entries(fillInMap)){
+    let extra=0;
+    for(const f of fills)extra+=(salesMap[f]||0);
+    if(extra>0)boostedSalesMap[main]=(boostedSalesMap[main]||0)+extra;
+  }
+
+  // ── Which items are fill-ins (so we can flag them) ──
+  const fillInItems=new Set(Object.values(fillInMap).flat());
+
+  // Rebuild salesTrendMap using only the filtered date range
+  if(window._salesDatedFull && (dateFrom||dateTo)){
+    buildSalesTrendMapFiltered(filteredSales);
+  }
+  // Trend detection uses salesTrendMap (from dated file)
+  const trendThreshold=0; // kept for fallback reference only
+
+  // ── Merge ──
+  allRows=[];
+  for(const [item,totalSoldRaw] of Object.entries(boostedSalesMap)){
+    if(totalSoldRaw<=0)continue;
+    const stock=stockMap[item];if(!stock)continue;
+
+    const fillInQty=Object.entries(fillInMap).find(([m])=>m===item)?.[1]?.reduce((a,f)=>(salesMap[f]||0)+a,0)||0;
+    const totalSold=totalSoldRaw;
+    let monthlyRate=totalSold/months;
+
+    // ── Use prior year as fallback if months < 3 ──
+    const hasPrevYear=!!prevYearMap[item];
+    let usedPrevFallback=false;
+    if(months<3&&hasPrevYear&&prevYearMap[item].avgMonthly>0){
+      monthlyRate=prevYearMap[item].avgMonthly;
+      usedPrevFallback=true;
+    }
+
+    // ── Seasonal multiplier from prior year ──
+    const {mult:seasonalMult,holiday:seasonalHol}=getSeasonalMultiplier(item,soonHolidays);
+    const adjMonthlyRate=monthlyRate*(seasonalMult>1?seasonalMult:1);
+
+    // ── Need to order ──
+    const lt=stock.lt;
+    // Net position = available (can be negative) + on order
+    // Negative net position means backlog exceeds incoming stock
+    const netPosition=stock.netPosition;
+    const coverage=adjMonthlyRate>0?(netPosition/adjMonthlyRate):999;
+    const needToOrder=Math.max(0,Math.round(adjMonthlyRate*lt-netPosition));
+
+    // ── Flags ──
+    // Use salesTrendMap if dated file uploaded, else fall back to top-15% velocity
+    const trendData=salesTrendMap[item]||null;
+    const isTrending=trendData ? trendData.trending : (monthlyRate>=trendThreshold&&monthlyRate>10);
+    const isFillIn=fillInItems.has(item);
+    const hasFillIns=fillInMap[item]?.length>0;
+    // Only flag holidays where this item had a real sales spike last year
+    const peakHols=soonHolidays.filter(h=>{
+      const {mult}=getSeasonalMultiplier(item,[h]);
+      return mult>=SPIKE_THRESHOLD;
+    });
+
+    allRows.push({
+      item,desc:stock.desc||descMap[item]||'',vendor:stock.vendor,vtype:stock.vtype,cat:stock.cat,
+      totalSold:salesMap[item]||0,fillInQty,totalSoldWithFills:totalSold,
+      monthlyRate,seasonalMult,adjMonthlyRate,
+      avail:stock.avail,onOrder:stock.onOrder,
+      avail:stock.avail,custOrders:stock.custOrders,vendorOrder:stock.vendorOrder,
+      netPosition:stock.netPosition,backlog:stock.backlog,coverage,lt,needToOrder,orderQty:0,
+      isTrending,trendData,isFillIn,hasFillIns,seasonalHol,peakHols,usedPrevFallback,
+      status:needToOrder>0?'ORDER NEEDED':'OK'
+    });
+  }
+
+  allRows.sort((a,b)=>b.needToOrder-a.needToOrder||b.totalSold-a.totalSold);
+  // Preserve any manually edited orderQty values from previous run
+  allRows.forEach(r=>{
+    if(selectedRowsCache[r.item]?.orderQty !== undefined &&
+       selectedRowsCache[r.item].orderQty !== selectedRowsCache[r.item].needToOrder){
+      r.orderQty = selectedRowsCache[r.item].orderQty;
+    }
+  });
+  if(!allRows.length){setStatus('⚠ No matching items found — check that Item No values match between both files.');return;}
+  renderSummary(months);renderTable();
+  buildAnalysisRows();
+  document.getElementById('results').style.display='flex';
+  document.getElementById('empty-state').style.display='none';
+  // Refresh cache for any selected items visible in this run
+  allRows.forEach(r=>{ if(selectedForOrder.has(r.item)) selectedRowsCache[r.item]=r; });
+  renderColHeaders();
+  document.getElementById('hdr-stats').textContent=allRows.length+' items · '+allRows.filter(r=>r.status==='ORDER NEEDED').length+' need ordering';
+}
+
+function renderSummary(months){
+  const total=allRows.length;
+  const need=allRows.filter(r=>r.status==='ORDER NEEDED').length;
+  const ok=total-need;
+  const trending=allRows.filter(r=>r.isTrending).length;
+  const seasonal=allRows.filter(r=>r.seasonalMult>1.1).length;
+  const vLabel=document.getElementById('vendor-filter').value?` · ${document.getElementById('vendor-filter').value}`:'';
+  const tLabel=activeTypeFilter?` · ${activeTypeFilter}`:'';
+  const backlogCount=allRows.filter(r=>r.netPosition<0).length;
+  document.getElementById('summary-cards').innerHTML=`
+    <div class="stat-card"><div class="val">${total}</div><div class="lbl">Items Matched</div></div>
+    <div class="stat-card warn"><div class="val">${need}</div><div class="lbl">Need to Order</div></div>
+    <div class="stat-card ok"><div class="val">${ok}</div><div class="lbl">Well Stocked</div></div>
+    <div class="stat-card" style="border-left-color:var(--red)"><div class="val" style="color:var(--red)">${backlogCount}</div><div class="lbl">⚠ Has Backlog</div></div>`;
+  const filterLabels={'order':'Order Needed','ok':'OK','trend':'Trending','seasonal':'Seasonal','fillin':'Fill-ins'};
+  const fLabel=activeFilters.has('all')?''
+    :' · '+[...activeFilters].map(f=>filterLabels[f]||f).join(' + ');
+  document.getElementById('results-title').textContent=`Results — ${months} mo${tLabel}${vLabel}${fLabel}`;
+}
+
+function setFilter(f,el){
+  if(f==='all'){
+    // All clears everything else
+    activeFilters=new Set(['all']);
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+  } else {
+    // Toggle this filter
+    activeFilters.delete('all');
+    document.querySelector('.tab[data-filter="all"]').classList.remove('active');
+    if(activeFilters.has(f)){
+      activeFilters.delete(f);
+      el.classList.remove('active');
+      // If nothing selected, revert to all
+      if(activeFilters.size===0){
+        activeFilters.add('all');
+        document.querySelector('.tab[data-filter="all"]').classList.add('active');
+      }
+    } else {
+      activeFilters.add(f);
+      el.classList.add('active');
+    }
+  }
+  renderTable();
+}
+
+function renderTable(){
+  const itemQ=(document.getElementById('item-search-orders')?.value||'').trim().toLowerCase();
+  let rows=allRows;
+  if(itemQ) rows=rows.filter(r=>r.item.toLowerCase().includes(itemQ)||
+                                 (r.desc&&r.desc.toLowerCase().includes(itemQ)));
+  if(!activeFilters.has('all')){
+    rows=rows.filter(r=>{
+      // Row passes if it matches ANY active filter
+      if(activeFilters.has('order')    && r.status==='ORDER NEEDED') return true;
+      if(activeFilters.has('ok')       && r.status==='OK')           return true;
+      if(activeFilters.has('trend')    && r.isTrending)              return true;
+      if(activeFilters.has('seasonal') && (r.seasonalMult>1.1||r.peakHols.length>0)) return true;
+      if(activeFilters.has('fillin')   && (r.hasFillIns||r.isFillIn)) return true;
+      if(activeFilters.has('backlog')  && r.netPosition<0)           return true;
+      return false;
+    });
+  }
+  // Apply sort if active
+  if(sortCol){
+    const col=COL_DEFS.find(c=>c.id===sortCol);
+    if(col&&col.sortVal){
+      rows=[...rows].sort((a,b)=>{
+        const va=col.sortVal(a), vb=col.sortVal(b);
+        if(typeof va==='string'&&typeof vb==='string')
+          return va.localeCompare(vb)*sortDir;
+        return (va-vb)*sortDir;
+      });
+    }
+  }
+  const tbody=document.getElementById('table-body');
+  const cols=getOrderedCols();
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="${cols.length}" style="text-align:center;padding:40px;color:var(--ink3)">No items match this filter.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=rows.map(r=>{
+    const ri=allRows.indexOf(r);
+    const rowClass=(selectedForOrder.has(r.item)?'row-selected ':'')+(r.isTrending?'trending':r.isFillIn?'fillrow':r.netPosition<0?'backlogrow':'');
+    const cells=cols.map(col=>col.render(r,ri)).join('');
+    return`<tr class="${rowClass}">${cells}</tr>`;
+  }).join('');
+  if(typeof updateLoadBar==='function') updateLoadBar();
+}
+
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=allRows.map(r=>({
+    'Item No':r.item,'Description':r.desc,'Vendor':r.vendor,'Vendor Type':r.vtype||'','Category':r.cat,
+    'Total Sold (Own)':r.totalSold,'Fill-in Add':r.fillInQty||0,'Total Sold (w/ Fill-ins)':r.totalSoldWithFills,
+    'Monthly Rate':parseFloat(r.monthlyRate.toFixed(1)),
+    'Seasonal Multiplier':r.seasonalMult>1?r.seasonalMult:'',
+    'Adj. Monthly Rate':parseFloat(r.adjMonthlyRate.toFixed(1)),
+    'Available (net of cust. orders)':r.avail,'Customer Orders':r.custOrders,'Vendor Order (incoming)':r.vendorOrder,'Net Position':r.netPosition,
+    'Coverage (Months)':r.coverage>=999?'':parseFloat(r.coverage.toFixed(1)),
+    'Lead Time (Months)':r.lt,'Need to Order':r.needToOrder,
+    'High Velocity':r.isTrending?'Yes':'',
+    'Seasonal Holiday':r.seasonalHol?.name||'',
+    'Prior Year Fallback':r.usedPrevFallback?'Yes':'',
+    'Status':r.status
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb,ws,'Order Analysis');
+  XLSX.writeFile(wb,`order_analysis_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BULK IMPORT
+// ══════════════════════════════════════════════════════════════════
+async function handleBulkImport(input){
+  const file=input.files[0];if(!file)return;
+  try{
+    const rows=await readXlsx(file);
+    if(!rows.length){showSbStatus('bulk-status','⚠ Empty file','#f87171');return;}
+    const s=rows[0]||{};
+    const nCol=Object.keys(s).find(k=>/vendor|name/i.test(k));
+    const tCol=Object.keys(s).find(k=>/type/i.test(k));
+    const lCol=Object.keys(s).find(k=>/lead|time|lt/i.test(k));
+    if(!nCol){showSbStatus('bulk-status','⚠ No Vendor Name column','#f87171');return;}
+    let n=0;
+    for(const row of rows){
+      const v=String(row[nCol]||'').trim();if(!v)continue;
+      const raw=String(row[tCol]||'').trim();
+      const type=['Import','Canada','Local'].find(t=>t.toLowerCase()===raw.toLowerCase())||'';
+      vendorSettings[v]={type,lt:parseFloat(row[lCol])||3.5};n++;
+    }
+    saveLS();renderVendorDropdown();renderSavedTags();
+    showSbStatus('bulk-status',`✓ ${n} vendors imported`,'#4ade80');
+    input.value='';
+  }catch(err){showSbStatus('bulk-status','Error: '+err.message,'#f87171');}
+}
+
+function downloadTemplate(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet([
+    {'Vendor Name':'Example Vendor 1','Type':'Import','Lead Time (Months)':3.5},
+    {'Vendor Name':'Example Vendor 2','Type':'Canada','Lead Time (Months)':2},
+    {'Vendor Name':'Example Vendor 3','Type':'Local','Lead Time (Months)':1},
+  ]);
+  ws['!cols']=[{wch:30},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'Vendor Settings');
+  XLSX.writeFile(wb,'vendor_settings_template.xlsx');
+}
+
+function downloadFillInTemplate(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet([
+    {'Main Item':'PLP-C9','Fill-in 1':'SPOT-C9','Fill-in 2':''},
+    {'Main Item':'SPOT-913','Fill-in 1':'PAN-913A','Fill-in 2':'PAN-913B'},
+  ]);
+  ws['!cols']=[{wch:16},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fill-in Map');
+  XLSX.writeFile(wb,'fillin_map_template.xlsx');
+}
+
+function showSbStatus(id,msg,color){
+  const el=document.getElementById(id);
+  el.textContent=msg;el.style.color=color;el.style.display='block';
+  setTimeout(()=>el.style.display='none',4000);
+}
+function setStatus(msg){document.getElementById('status').textContent=msg;}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// DETAIL POPUPS
+// ══════════════════════════════════════════════════════════════════
+const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function openDetail(){
+  const ov=document.getElementById('detail-overlay');
+  ov.style.display='flex';
+  requestAnimationFrame(()=>ov.classList.add('show'));
+}
+function closeDetail(){
+  const ov=document.getElementById('detail-overlay');
+  ov.classList.remove('show');
+  setTimeout(()=>ov.style.display='none',200);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail();});
+
+function showTrendDetail(idx){
+  const r=allRows[idx];if(!r)return;
+  document.getElementById('dm-icon').textContent='📈';
+  document.getElementById('dm-title').textContent='Sales Trend — '+r.item;
+  document.getElementById('dm-subtitle').textContent=r.desc;
+  const td=r.trendData;
+  const pym=prevYearMap[r.item];
+  const allRates=allRows.map(x=>x.monthlyRate).sort((a,b)=>b-a);
+  const rank=allRates.findIndex(v=>v<=r.monthlyRate)+1;
+
+  // ── Trend section (dated file) ──
+  let trendHtml='';
+  if(td){
+    const isUp=td.trendPct>=20, isDown=td.trendPct<=-20;
+    const trendColor=isUp?'green':isDown?'red':'';
+    const arrow=isUp?'↑':isDown?'↓':'→';
+    // Bar chart: older months (gray) vs recent months (green)
+    // moVals already built in salesTrendMap from buildSalesTrendMap
+    // Sort all months chronologically (M/YYYY format)
+    const parseMoYear=mo=>{const[m,y]=mo.split('/');return new Date(+y,+m-1,1);};
+    const allMoKeys=[...td.olderMonths,...td.recentMonths]
+      .sort((a,b)=>parseMoYear(a)-parseMoYear(b));
+    const moVals=td.monthlyQty||{};
+    const maxVal=Math.max(...allMoKeys.map(m=>moVals[m]||0),1);
+    const barsHtml=allMoKeys.map(m=>{
+      const val=moVals[m]||0, pw=Math.round(val/maxVal*100);
+      const isRecent=td.recentMonths.includes(m);
+      return`<div class="dm-bar-row">
+        <div class="dm-bar-label" style="width:58px;font-size:10px">${(()=>{const[mm,yy]=m.split('/');return MONTHS_SHORT[(parseInt(mm)||1)-1]+' '+yy;})()} </div>
+        <div class="dm-bar-track"><div class="dm-bar-fill" style="width:${pw}%;background:${isRecent?'#16a34a':'#94a3b8'}"></div></div>
+        <div class="dm-bar-val">${val.toLocaleString()}</div>
+        <div style="font-size:9px;font-weight:700;width:44px;color:${isRecent?'#16a34a':'#94a3b8'}">${isRecent?'RECENT':'OLDER'}</div>
+      </div>`;
+    }).join('');
+    trendHtml=`
+      <div class="dm-section"><div class="dm-stat-row">
+        <div class="dm-stat"><div class="ds-val">${td.olderRate}</div><div class="ds-lbl">Older Avg/Month</div></div>
+        <div class="dm-stat green"><div class="ds-val">${td.recentRate}</div><div class="ds-lbl">Recent Avg/Month</div></div>
+        <div class="dm-stat ${trendColor}"><div class="ds-val">${arrow} ${td.trendPct>0?'+':''}${td.trendPct}%</div><div class="ds-lbl">Trend vs Earlier</div></div>
+        <div class="dm-stat"><div class="ds-val">#${rank}</div><div class="ds-lbl">Velocity Rank</div></div>
+      </div></div>
+      <div class="dm-section"><div class="dm-note ${isUp?'amber':''}">
+        Sales in the last <strong>${td.recentMonths.length} month(s)</strong> averaged <strong>${td.recentRate}/month</strong>
+        vs <strong>${td.olderRate}/month</strong> in the prior period — a <strong>${td.trendPct>0?'+':''}${td.trendPct}% change</strong>.
+        ${isUp?'⚠ Demand is accelerating — consider ordering more than the base calculation suggests.':''}
+      </div></div>
+      <div class="dm-section"><div class="dm-section-title">Month by Month <span style="font-size:9px;color:#94a3b8">■ older &nbsp; <span style="color:#16a34a">■ recent</span></span></div>${barsHtml}</div>`;
+  } else {
+    trendHtml=`<div class="dm-section"><div class="dm-note amber">Upload a <strong>Sales with Dates</strong> file (Item No · Month · QTY) in the sidebar to see month-over-month trend analysis for this item.</div></div>`;
+  }
+
+  // ── Prior year comparison ──
+  const pym2=prevYearMap[r.item];
+  const vsLY=pym2&&pym2.avgMonthly>0?Math.round((r.monthlyRate/pym2.avgMonthly-1)*100):null;
+  const lyHtml=`<div class="dm-section"><div class="dm-stat-row">
+    <div class="dm-stat ${vsLY>0?'green':vsLY<0?'red':''}"><div class="ds-val">${vsLY!==null?(vsLY>0?'+':'')+vsLY+'%':'—'}</div><div class="ds-lbl">vs Last Year Avg</div></div>
+    <div class="dm-stat"><div class="ds-val">${pym2?pym2.avgMonthly.toFixed(1):'—'}</div><div class="ds-lbl">Last Year Avg/Mo</div></div>
+    <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">This Year Rate</div></div>
+    <div class="dm-stat ${r.adjMonthlyRate>r.monthlyRate?'purple':''}"><div class="ds-val">${r.adjMonthlyRate.toFixed(1)}</div><div class="ds-lbl">Adj. Rate/Mo</div></div>
+  </div></div>`;
+
+  // ── Customer breakdown ──
+  let custHtml='';
+  if(td&&td.customers&&td.customers.length){
+    const topCustomers=td.customers.slice(0,10);
+    const maxRecent=Math.max(...topCustomers.map(c=>c.recentQty),1);
+    const rows=topCustomers.map(c=>{
+      const pw=Math.round(c.recentQty/maxRecent*100);
+      const trend=c.olderQty>0?Math.round((c.recentQty/c.olderQty-1)*100):null;
+      const trendStr=trend!==null
+        ?`<span style="font-size:10px;font-weight:700;color:${trend>20?'var(--green-dk)':trend<-20?'var(--red)':'var(--ink3)'}">${trend>0?'+':''}${trend}%</span>`
+        :'<span style="font-size:10px;color:var(--ink3)">new</span>';
+      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.name}">${c.name||c.code}</div>
+          <div style="font-size:10px;color:var(--ink3)">${c.code}</div>
+        </div>
+        <div style="width:80px">
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${pw}%;height:100%;background:var(--green);border-radius:3px"></div>
+          </div>
+        </div>
+        <div style="text-align:right;min-width:36px;font-size:12px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink)">${c.recentQty.toLocaleString()}</div>
+        ${trendStr}
+      </div>`;
+    }).join('');
+    const hasMore=td.customers.length>10?`<div style="font-size:11px;color:var(--ink3);text-align:center;padding:8px 0">+${td.customers.length-10} more customers</div>`:'';
+    custHtml=`<div class="dm-section">
+      <div class="dm-section-title">Top Customers — Recent Period <span style="font-size:9px;color:var(--ink3);font-weight:400">(${td.recentMonths.join(', ')})</span></div>
+      <div style="margin-bottom:4px;display:flex;justify-content:space-between">
+        <span style="font-size:10px;color:var(--ink3)">Customer</span>
+        <span style="font-size:10px;color:var(--ink3)">Recent Qty &nbsp; vs Prior</span>
+      </div>
+      ${rows}${hasMore}
+    </div>`;
+  } else if(td) {
+    custHtml=`<div class="dm-section"><div class="dm-note amber">Upload a sales file with <strong>Code</strong> and <strong>Name</strong> columns to see customer breakdown.</div></div>`;
+  }
+
+  document.getElementById('dm-body').innerHTML=trendHtml+lyHtml+custHtml;
+  openDetail();
+}
+
+function showHolidayDetail(idx,holId){
+  const r=allRows[idx];if(!r)return;
+  document.getElementById('dm-icon').textContent='✡️';
+  document.getElementById('dm-title').textContent='Seasonal Analysis — '+r.item;
+  document.getElementById('dm-subtitle').textContent=r.desc;
+  const soonHols=getSoonHolidays(365);
+  const activeHol=holId?soonHols.find(h=>h.id===holId):r.seasonalHol;
+  const holRows=soonHols.length?soonHols.map(h=>{
+    const {mult}=getSeasonalMultiplier(r.item,[h]);
+    const days=Math.round((h.date-new Date())/86400000);
+    const ob=new Date(h.date);ob.setDate(ob.getDate()-h.peak*7-r.lt*30);
+    const obStr=ob.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const obDiff=Math.round((ob-new Date())/86400000);
+    return`<div class="dm-hol-row">
+      <div class="dm-hol-dot" style="background:${h.color}"></div>
+      <div class="dm-hol-name">${h.name}</div>
+      <div class="dm-hol-date">${days}d · order by ${obStr}${obDiff<0?' <span style="color:#dc2626;font-weight:700">(PAST)</span>':''}</div>
+      ${mult>1.1?`<div class="dm-hol-mult">×${mult.toFixed(2)}</div>`:'<div style="font-size:10px;color:#9aabbc">no spike</div>'}
+    </div>`;
+  }).join(''):'<div style="font-size:12px;color:#9aabbc">No active holidays. Enable them on the Jewish Holidays tab.</div>';
+  const pym=prevYearMap[r.item];
+  let multExplain='';
+  if(activeHol&&pym){
+    const peakMonths=getPriorPeakMonths(activeHol); const detectedPrior=activeHol.prior||activeHol.date;
+    const pq=peakMonths.reduce((s,k)=>s+(pym.byMonthYear?.[k]||0),0);
+    const pa=peakMonths.length>0?pq/peakMonths.length:0;
+    const mult=pym.avgMonthly>0?pa/pym.avgMonthly:1;
+    const priorStr=(detectedPrior||activeHol.prior||activeHol.date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    multExplain=`<div class="dm-note purple">
+      Comparing sales in the <strong>${activeHol.peak}-week window before ${activeHol.name} ${priorStr}</strong> (prior year).<br>
+      Peak avg: <strong>${pa.toFixed(0)}/month</strong> vs annual avg: <strong>${pym.avgMonthly.toFixed(0)}/month</strong>
+      — <strong>×${mult.toFixed(2)} multiplier</strong>${mult>=SPIKE_THRESHOLD?' applied to order qty.':' — below spike threshold (30%), no adjustment applied.'}<br>
+      Months analyzed: ${(peakMonths||[]).map(k=>{const p=k.split('/');return MONTHS_SHORT[(parseInt(p[0])-1)]+' '+p[1];}).join(', ')}.
+    </div>`;
+  } else {
+    multExplain=`<div class="dm-note amber">Upload a prior year sales file with dates to calculate seasonal multipliers based on the 2025 holiday dates.</div>`;
+  }
+  document.getElementById('dm-body').innerHTML=`
+    <div class="dm-section"><div class="dm-stat-row">
+      <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Base Rate/Mo</div></div>
+      <div class="dm-stat purple"><div class="ds-val">${r.seasonalMult>1?'×'+r.seasonalMult:'×1.0'}</div><div class="ds-lbl">Seasonal Mult.</div></div>
+      <div class="dm-stat amber"><div class="ds-val">${r.adjMonthlyRate.toFixed(1)}</div><div class="ds-lbl">Adj. Rate/Mo</div></div>
+      <div class="dm-stat ${r.needToOrder>0?'red':'green'}"><div class="ds-val">${r.needToOrder.toLocaleString()}</div><div class="ds-lbl">Need to Order</div></div>
+    </div></div>
+    <div class="dm-section">${multExplain}</div>
+    <div class="dm-section"><div class="dm-section-title">Upcoming Holidays & Multipliers</div>${holRows}</div>`;
+  openDetail();
+}
+
+function showFillInDetail(idx){
+  const r=allRows[idx];if(!r)return;
+  document.getElementById('dm-icon').textContent='🔄';
+  document.getElementById('dm-title').textContent='Fill-in Substitutes — '+r.item;
+  document.getElementById('dm-subtitle').textContent=r.desc;
+  const fills=fillInMap[r.item]||[];
+  const fillRows=fills.map(f=>{
+    const qty=salesMap[f]||0;
+    const fdesc=allRows.find(x=>x.item===f)?.desc||f;
+    return`<div class="dm-hol-row">
+      <div style="font-size:16px">🔄</div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:700;color:#1F4E79">${f}</div><div style="font-size:11px;color:#6b7a8d">${fdesc}</div></div>
+      <div style="text-align:right"><div style="font-size:13px;font-weight:800;color:#1d4ed8">${qty.toLocaleString()}</div><div style="font-size:10px;color:#6b7a8d">units sold</div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('dm-body').innerHTML=`
+    <div class="dm-section"><div class="dm-stat-row">
+      <div class="dm-stat"><div class="ds-val">${(r.totalSold-r.fillInQty).toLocaleString()}</div><div class="ds-lbl">Own Sales</div></div>
+      <div class="dm-stat" style="border-left:3px solid #1d4ed8"><div class="ds-val" style="color:#1d4ed8">+${r.fillInQty.toLocaleString()}</div><div class="ds-lbl">Fill-in Sales</div></div>
+      <div class="dm-stat green"><div class="ds-val">${r.totalSoldWithFills.toLocaleString()}</div><div class="ds-lbl">Combined Total</div></div>
+      <div class="dm-stat amber"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Combined Rate/Mo</div></div>
+    </div></div>
+    <div class="dm-section"><div class="dm-note">Fill-in items sold in place of <strong>${r.item}</strong> are included in the forecast so you order enough to cover total demand.</div></div>
+    <div class="dm-section"><div class="dm-section-title">Fill-in Items</div>${fillRows||'<div style="font-size:12px;color:#9aabbc">No fill-in items found.</div>'}</div>`;
+  openDetail();
+}
+
+function showPrevYearDetail(idx){
+  const r=allRows[idx];if(!r)return;
+  document.getElementById('dm-icon').textContent='📅';
+  document.getElementById('dm-title').textContent='Prior Year Baseline — '+r.item;
+  document.getElementById('dm-subtitle').textContent=r.desc;
+  const pym=prevYearMap[r.item];
+  const months=parseFloat(document.getElementById('months').value)||6;
+  const currRate=(salesMap[r.item]||0)/months;
+  let barsHtml='';
+  if(pym){
+    const maxV=Math.max(...[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>pym.byMonthYear?Object.entries(pym.byMonthYear).filter(([k])=>parseInt(k.split('/')[0])===m).reduce((s,[,v])=>s+v,0):pym[m]||0),1);
+    barsHtml='<div class="dm-section"><div class="dm-section-title">Prior Year by Month <span style="color:#7c3aed;font-size:9px;margin-left:6px">■ = spike (>130% avg)</span></div>'+
+      MONTHS_SHORT.map((mo,i)=>{
+        const m=i+1,val=pym[m]||0,pw=Math.round(val/maxV*100),isSpike=val>pym.avgMonthly*1.3;
+        return`<div class="dm-bar-row"><div class="dm-bar-label">${mo}</div><div class="dm-bar-track"><div class="dm-bar-fill" style="width:${pw}%;background:${isSpike?'#7c3aed':'#1F4E79'}"></div></div><div class="dm-bar-val" style="${isSpike?'color:#7c3aed;font-weight:800':''}">${val.toLocaleString()}</div></div>`;
+      }).join('')+'</div>';
+  }
+  document.getElementById('dm-body').innerHTML=`
+    <div class="dm-section"><div class="dm-stat-row">
+      <div class="dm-stat purple"><div class="ds-val">${pym?pym.avgMonthly.toFixed(1):'—'}</div><div class="ds-lbl">Prior Yr Avg/Mo</div></div>
+      <div class="dm-stat"><div class="ds-val">${currRate.toFixed(1)}</div><div class="ds-lbl">Current Yr Rate</div></div>
+      <div class="dm-stat ${months<3?'amber':'green'}"><div class="ds-val">${months<3?'⚠ Fallback':'✓ Current'}</div><div class="ds-lbl">Rate Source</div></div>
+      <div class="dm-stat"><div class="ds-val">${pym?pym.total.toLocaleString():'—'}</div><div class="ds-lbl">Prior Yr Total</div></div>
+    </div></div>
+    <div class="dm-section"><div class="dm-note ${months<3?'amber':'green'}">
+      ${months<3?`Only <strong>${months} month(s)</strong> of current data — using prior year avg of <strong>${pym?pym.avgMonthly.toFixed(1):'?'}/month</strong> as baseline.`:`<strong>${months} months</strong> of current data — prior year used only for seasonal multipliers.`}
+    </div></div>${barsHtml}`;
+  openDetail();
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// GOOGLE SHEETS SYNC
+// ══════════════════════════════════════════════════════════════════
+// The Google Sheet must be published to web as CSV.
+// It should have tabs (sheets) named:
+//   "VendorSettings"  — columns: Vendor Name | Type | Lead Time
+//   "FillInMap"       — columns: Main Item | Fill-in 1 | Fill-in 2
+//   "HolidaySettings" — columns: Holiday ID | Peak Weeks | Enabled
+//
+// To publish: File → Share → Publish to web → Each sheet as CSV
+// Then paste the base spreadsheet URL here (not the published CSV URL).
+
+function getSheetId(url){
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+// Convert a published Google Sheet tab to CSV URL
+function sheetCsvUrl(sheetId, tabName){
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+}
+
+function parseGoogleCsv(csvText){
+  const lines = csvText.trim().split('\n');
+  if(lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line=>{
+    // Handle quoted fields with commas
+    const vals=[];let cur='',inQ=false;
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){vals.push(cur.trim());cur='';}
+      else cur+=ch;
+    }
+    vals.push(cur.trim());
+    const obj={};
+    headers.forEach((h,i)=>{ obj[h]=vals[i]||''; });
+    return obj;
+  });
+}
+
+async function syncFromGoogle(){
+  const url = document.getElementById('gs-url').value.trim();
+  if(!url){ showGsStatus('⚠ Please paste your Google Sheet URL first','#f87171'); return; }
+  const sheetId = getSheetId(url);
+  if(!sheetId){ showGsStatus('⚠ Could not find Sheet ID in URL','#f87171'); return; }
+  showGsStatus('⏳ Pulling from Google Sheets...','#fbbf24');
+
+  try {
+    let imported=0, errors=[];
+
+    // ── VendorSettings tab ──
+    try {
+      const r1 = await fetch(sheetCsvUrl(sheetId,'VendorSettings'));
+      if(r1.ok){
+        const rows = parseGoogleCsv(await r1.text());
+        const nCol = Object.keys(rows[0]||{}).find(k=>/vendor|name/i.test(k));
+        const tCol = Object.keys(rows[0]||{}).find(k=>/type/i.test(k));
+        const lCol = Object.keys(rows[0]||{}).find(k=>/lead|time/i.test(k));
+        if(nCol) rows.forEach(row=>{
+          const v=String(row[nCol]||'').trim(); if(!v) return;
+          const raw=String(row[tCol]||'').trim();
+          const type=['Import','Canada','Local'].find(t=>t.toLowerCase()===raw.toLowerCase())||'';
+          vendorSettings[v]={type, lt:parseFloat(row[lCol])||3.5};
+          imported++;
+        });
+      }
+    } catch(e){ errors.push('VendorSettings: '+e.message); }
+
+    // ── FillInMap tab ──
+    try {
+      const r2 = await fetch(sheetCsvUrl(sheetId,'FillInMap'));
+      if(r2.ok){
+        const rows2 = parseGoogleCsv(await r2.text());
+        if(rows2.length){
+          const keys=Object.keys(rows2[0]);
+          fillInMap={};
+          rows2.forEach(row=>{
+            const main=String(row[keys[0]]||'').trim().toUpperCase(); if(!main) return;
+            const fills=[];
+            const f1=String(row[keys[1]]||'').trim().toUpperCase(); if(f1) fills.push(f1);
+            if(keys[2]){const f2=String(row[keys[2]]||'').trim().toUpperCase(); if(f2) fills.push(f2);}
+            fillInMap[main]=fills;
+          });
+          imported+=rows2.length;
+        }
+      }
+    } catch(e){ errors.push('FillInMap: '+e.message); }
+
+    // ── HolidaySettings tab ──
+    try {
+      const r3 = await fetch(sheetCsvUrl(sheetId,'HolidaySettings'));
+      if(r3.ok){
+        const rows3 = parseGoogleCsv(await r3.text());
+        const idCol  = Object.keys(rows3[0]||{}).find(k=>/id/i.test(k));
+        const pkCol  = Object.keys(rows3[0]||{}).find(k=>/peak/i.test(k));
+        const enCol  = Object.keys(rows3[0]||{}).find(k=>/enable/i.test(k));
+        if(idCol) rows3.forEach(row=>{
+          const id=String(row[idCol]||'').trim(); if(!id) return;
+          if(!holSettings[id]) holSettings[id]={};
+          if(pkCol) holSettings[id].peak=parseInt(row[pkCol])||6;
+          if(enCol) holSettings[id].enabled=String(row[enCol]||'').toLowerCase()!=='false';
+        });
+      }
+    } catch(e){ errors.push('HolidaySettings: '+e.message); }
+
+    saveLS(); saveHol(); renderVendorDropdown(); renderSavedTags();
+    const msg = errors.length
+      ? `⚠ ${imported} records imported · Errors: ${errors.join('; ')}`
+      : `✓ Synced ${imported} records from Google Sheets`;
+    showGsStatus(msg, errors.length?'#fbbf24':'#4ade80');
+
+    // Save sheet URL for next time
+    try{ localStorage.setItem('gs_url_v1', url); } catch(e){}
+
+  } catch(err){
+    showGsStatus('✗ Error: '+err.message+' — Make sure the sheet is published to web.','#f87171');
+  }
+}
+
+function pushToGoogle(){
+  // Push is not possible directly from browser (no auth).
+  // Instead, export a downloadable CSV the user can paste into their Google Sheet.
+  const wb = XLSX.utils.book_new();
+
+  // VendorSettings
+  const vRows = Object.entries(vendorSettings).map(([v,s])=>({'Vendor Name':v,'Type':s.type||'','Lead Time':s.lt||3.5}));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vRows.length?vRows:[{'Vendor Name':'','Type':'','Lead Time':''}]), 'VendorSettings');
+
+  // FillInMap
+  const fRows = Object.entries(fillInMap).map(([m,f])=>({'Main Item':m,'Fill-in 1':f[0]||'','Fill-in 2':f[1]||''}));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fRows.length?fRows:[{'Main Item':'','Fill-in 1':'','Fill-in 2':''}]), 'FillInMap');
+
+  // HolidaySettings
+  const hRows = HOLIDAYS.map(h=>{const s=holSettings[h.id]||{};return{'Holiday ID':h.id,'Holiday Name':h.name,'Peak Weeks':s.peak||h.peak,'Enabled':s.enabled!==undefined?s.enabled:h.enabled};});
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hRows), 'HolidaySettings');
+
+  XLSX.writeFile(wb, 'team_settings_for_google_sheets.xlsx');
+  showGsStatus('✓ Downloaded — upload this file to your Google Sheet, then publish it to web.','#4ade80');
+}
+
+function openGoogleSetupGuide(){
+  const guide = `HOW TO SET UP GOOGLE SHEETS SYNC
+
+1. Create a new Google Sheet
+2. Add 3 tabs named exactly:
+   • VendorSettings  (columns: Vendor Name, Type, Lead Time)
+   • FillInMap       (columns: Main Item, Fill-in 1, Fill-in 2)
+   • HolidaySettings (columns: Holiday ID, Holiday Name, Peak Weeks, Enabled)
+
+3. Click "⬆ Push to Sheet" in the tool — it downloads an Excel file
+4. Import that Excel into your Google Sheet (File → Import)
+5. Publish the sheet: File → Share → Publish to web → select "Entire Document" → CSV → Publish
+6. Copy the original Sheet URL (not the publish URL) and paste it in the URL box
+7. Click "⬇ Pull from Sheet" — done!
+
+From now on: edit the Google Sheet, hit Pull, and all team members get the same settings.`;
+  alert(guide);
+}
+
+function showGsStatus(msg, color){
+  const el=document.getElementById('gs-status');
+  el.textContent=msg; el.style.color=color; el.style.display='block';
+}
+
+// Restore saved Google Sheet URL on load
+try{
+  const savedUrl=localStorage.getItem('gs_url_v1');
+  if(savedUrl) document.addEventListener('DOMContentLoaded',()=>{
+    const el=document.getElementById('gs-url');
+    if(el) el.value=savedUrl;
+  });
+}catch(e){}
+
+// Clear any old-format cached data that could block holiday detection
+try{
+  // Check if old v1 key exists — if so wipe everything and start fresh
+  ['prevYearMap_v1'].forEach(k=>localStorage.removeItem(k));
+  // Restore file month keys
+  const fmk=localStorage.getItem('fileMonthYearKeys_v2');
+  if(fmk) window._fileMonthYearKeys=new Set(JSON.parse(fmk));
+  // Restore prior year map — validate byMonthYear format
+  const saved=localStorage.getItem('prevYearMap_v2');
+  if(saved){
+    const parsed=JSON.parse(saved);
+    const sample=Object.values(parsed)[0];
+    if(sample && sample.byMonthYear){ prevYearMap=parsed; }
+    else { localStorage.removeItem('prevYearMap_v2'); localStorage.removeItem('fileMonthYearKeys_v2'); }
+  }
+}catch(e){}
+
+
+// ══════════════════════════════════════════════════════════════════
+// DRAGGABLE COLUMNS
+// ══════════════════════════════════════════════════════════════════
+const COL_DEFS = [
+  {id:'select',  label:'',              align:'left',  sortVal:null,
+    render:(r,ri)=>`<td style="width:32px;text-align:center"><input type="checkbox" class="order-checkbox" ${selectedForOrder.has(r.item)?'checked':''} onchange="toggleOrderSelect('${r.item.replace(/'/g,"\'")}',this.checked)" onclick="event.stopPropagation()"></td>`
+  },
+  {id:'item',    label:'Item No',       align:'left',  sortVal:r=>r.item,
+    render:r=>`<td class="item" style="white-space:nowrap">
+      ${r.item}
+      <button onclick="event.stopPropagation();copyToClipboard('${r.item}',this)"
+        title="Copy ${r.item}"
+        style="margin-left:5px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.2);
+          cursor:pointer;color:rgba(148,163,184,.7);font-size:10px;padding:1px 5px;border-radius:4px;
+          vertical-align:middle;line-height:1.4;transition:all .15s;font-family:monospace"
+        onmouseover="this.style.background='rgba(59,130,246,.25)';this.style.color='#93c5fd'"
+        onmouseout="this.style.background='rgba(59,130,246,.12)';this.style.color='rgba(148,163,184,.7)'">⎘</button>
+    </td>`},
+  {id:'desc',    label:'Description',   align:'left',  sortVal:r=>r.desc,            render:r=>`<td class="desc">${r.desc}</td>`},
+  {id:'vendor',  label:'Vendor',        align:'left',  sortVal:r=>r.vendor,          render:r=>`<td class="vnd">${r.vendor}</td>`},
+  {id:'type',    label:'Type',          align:'left',  sortVal:r=>r.vtype||'',       render:r=>{const tc=TYPE_COLORS[r.vtype]||'unset',tl=r.vtype||'—';return`<td><span class="vtype-badge ${tc}">${tl}</span></td>`;}},
+  {id:'sold',    label:'Total Sold',    align:'right', sortVal:r=>r.totalSold,       render:r=>`<td class="num">${r.totalSold.toLocaleString()}</td>`},
+  {id:'fillin',  label:'+Fill-ins',     align:'right', sortVal:r=>r.fillInQty||0,    render:r=>`<td class="num" style="color:var(--blue-dk);font-weight:700">${r.fillInQty>0?'+'+r.fillInQty.toLocaleString():'—'}</td>`},
+  {id:'rate',    label:'Monthly Rate',  align:'right', sortVal:r=>r.monthlyRate,     render:r=>`<td class="num">${r.monthlyRate.toFixed(1)}</td>`},
+  {id:'smult',   label:'Seasonal ×',   align:'right', sortVal:r=>r.seasonalMult,    render:r=>`<td class="num"><span class="seasonal-mult">${r.seasonalMult>1.1?'×'+r.seasonalMult:'—'}</span></td>`},
+  {id:'adjrate', label:'Adj. Rate',     align:'right', sortVal:r=>r.adjMonthlyRate,  render:r=>`<td class="num" style="font-weight:700">${r.adjMonthlyRate.toFixed(1)}</td>`},
+  {id:'avail',   label:'Available',     align:'right', sortVal:r=>r.avail,
+    render:r=>{
+      const neg=r.avail<0;
+      return`<td class="num"><span style="${neg?'color:var(--red);font-weight:800':''}">${r.avail.toLocaleString()}</span></td>`;
+    }
+  },
+  {id:'onorder', label:'Vendor Order',   align:'right', sortVal:r=>r.vendorOrder,
+    render:r=>`<td class="num" style="${r.vendorOrder>0?'color:var(--green-dk);font-weight:700':''}">${r.vendorOrder>0?r.vendorOrder.toLocaleString():'—'}</td>`
+  },
+  {id:'netpos',  label:'Net Position',  align:'right', sortVal:r=>r.netPosition,
+    render:r=>{
+      const net=r.netPosition;
+      const color=net<0?'var(--red)':net===0?'var(--amber)':'var(--green-dk)';
+      const weight=net<=0?'800':'600';
+      const suffix=net<0
+        ?`<span style="font-size:9px;color:var(--red);margin-left:3px" title="On-hand less customer orders is negative — backlog exists even after vendor order arrives">▼BACKLOG</span>`
+        :'';
+      return`<td class="num"><span style="color:${color};font-weight:${weight}">${net.toLocaleString()}</span>${suffix}</td>`;
+    }
+  },
+  {id:'cover',   label:'Coverage (mo)', align:'right', sortVal:r=>r.coverage>=999?9999:r.coverage,
+    render:r=>{
+      const cov=r.coverage;
+      const color=cov<0?'var(--red)':cov<1?'var(--amber)':'inherit';
+      const val=cov>=999?'—':cov.toFixed(1);
+      return`<td class="num" style="color:${color};font-weight:${cov<1?'700':'400'}">${val}</td>`;
+    }
+  },
+  {id:'need',    label:'Need to Order', align:'right', sortVal:r=>r.needToOrder,     render:r=>`<td class="num"><span class="order-qty ${r.needToOrder===0?'zero':''}">${r.needToOrder.toLocaleString()}</span></td>`},
+  {id:'orderqty',label:'Order Qty',      align:'right', sortVal:r=>r.orderQty,
+    render:(r,ri)=>{
+      const isEdited = r.orderQty > 0;
+      const cls = 'oqty-input'+(isEdited?' edited':r.orderQty===0?' zero':'');
+      return `<td class="num"><input type="number" class="${cls}" value="${r.orderQty||''}" min="0"
+        onchange="setOrderQty('${r.item.replace(/'/g,"\'")}',this.value,this)"
+        onclick="event.stopPropagation()"
+        title="Suggested: ${r.needToOrder}"></td>`;
+    }
+  },
+  {id:'cbm',label:'CBM',align:'right',sortVal:r=>r.orderQty*(cbmData[r.item]||0),
+    render:(r,ri)=>{
+      const cbmPer=cbmData[r.item]||0;
+      const totalCbm=cbmPer>0?(r.orderQty*cbmPer).toFixed(2):'—';
+      const color=cbmPer>0?'#86efac':'rgba(255,255,255,.25)';
+      return `<td class="num" style="font-size:11px;color:${color};font-weight:600">${totalCbm}</td>`;
+    }
+  },
+  {id:'flags',   label:'Flags',         align:'left',  sortVal:null,                 render:(r,ri)=>{
+    const flags=[];
+    if(r.isTrending)flags.push(`<span class="trend-badge badge-clickable" onclick="showTrendDetail(${ri})" title="Click for details">📈 Trending</span>`);
+    if(r.seasonalMult>1.1&&r.seasonalHol)flags.push(`<span class="peak-badge badge-clickable" onclick="showHolidayDetail(${ri})" title="Click for details">✡️ ${r.seasonalHol.name.split(' ')[0]} ×${r.seasonalMult}</span>`);
+    if(r.hasFillIns)flags.push(`<span class="fill-badge badge-clickable" onclick="showFillInDetail(${ri})" title="Click for details">🔄 Fill-ins</span>`);
+
+    if(r.netPosition<0)flags.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#FEF2F2;color:#dc2626;border:1px solid #fca5a5;white-space:nowrap" title="Net position: Available (${r.avail}) + Vendor Order (${r.vendorOrder}) = ${r.netPosition}">⚠ Net ${r.netPosition.toLocaleString()}</span>`);
+    r.peakHols.forEach(h=>{if(!r.seasonalHol||h.id!==r.seasonalHol.id)flags.push(`<span class="peak-badge badge-clickable" onclick="showHolidayDetail(${ri},'${h.id}')" title="Click for details">✡️ ${h.name.split(' ')[0]}</span>`);});
+    return`<td style="min-width:120px">${flags.join(' ')}</td>`;
+  }},
+  {id:'status',  label:'Status',        align:'left',  sortVal:r=>r.status,          render:r=>`<td><span class="badge ${r.status==='ORDER NEEDED'?'order':'ok'}">${r.status}</span></td>`},
+];
+
+const LS_COLS = 'col_order_v1';
+let colOrder = [];
+
+function loadColOrder(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(LS_COLS)||'null');
+    if(saved && Array.isArray(saved)){
+      // Merge: keep saved order, add any new cols at end
+      const known = new Set(saved);
+      colOrder = [
+        ...saved.filter(id=>COL_DEFS.find(c=>c.id===id)),
+        ...COL_DEFS.filter(c=>!known.has(c.id)).map(c=>c.id)
+      ];
+    } else {
+      colOrder = COL_DEFS.map(c=>c.id);
+    }
+  } catch(e){ colOrder = COL_DEFS.map(c=>c.id); }
+  // Always pin the select (checkbox) column first, regardless of saved order
+  colOrder = colOrder.filter(id=>id!=='select');
+  colOrder.unshift('select');
+}
+
+function saveColOrder(){
+  try{ localStorage.setItem(LS_COLS, JSON.stringify(colOrder)); }catch(e){}
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// ORDER SELECTION (checkboxes)
+// ══════════════════════════════════════════════════════════════════
+function toggleOrderSelect(item, checked){
+  if(checked){
+    selectedForOrder.add(item);
+    // Cache the full row data NOW so it survives vendor switches
+    const row = allRows.find(r=>r.item===item);
+    if(row) selectedRowsCache[item] = row;
+  } else {
+    selectedForOrder.delete(item);
+    delete selectedRowsCache[item];
+  }
+  updateOrderSelectionBar();
+  updateLoadBar();
+}
+
+function selectAllVisible(){
+  const rows=getCurrentlyDisplayedRows();
+  rows.forEach(r=>{
+    selectedForOrder.add(r.item);
+    selectedRowsCache[r.item] = r;
+  });
+  renderTable();
+  updateOrderSelectionBar();
+}
+
+function clearOrderSelection(){
+  selectedForOrder.clear();
+  selectedRowsCache={};
+  renderTable();
+  updateOrderSelectionBar();
+}
+
+function getCurrentlyDisplayedRows(){
+  let rows=allRows;
+  if(!activeFilters.has('all')){
+    rows=rows.filter(r=>{
+      if(activeFilters.has('order')    && r.status==='ORDER NEEDED') return true;
+      if(activeFilters.has('ok')       && r.status==='OK')           return true;
+      if(activeFilters.has('trend')    && r.isTrending)              return true;
+      if(activeFilters.has('seasonal') && (r.seasonalMult>1.1||r.peakHols.length>0)) return true;
+      if(activeFilters.has('fillin')   && (r.hasFillIns||r.isFillIn)) return true;
+      if(activeFilters.has('backlog')  && r.netPosition<0)           return true;
+      return false;
+    });
+  }
+  return rows;
+}
+
+function updateOrderSelectionBar(){
+  const bar=document.getElementById('order-selection-bar');
+  const count=selectedForOrder.size;
+  if(!bar) return;
+  if(count>0){
+    bar.style.display='flex';
+    document.getElementById('order-sel-count').textContent=count+' item'+(count!==1?'s':'')+' selected';
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function exportSelectedOrder(){
+  // If there are completed loads, export them with separators
+  if(completedOrders.length > 0){
+    exportWithLoads(); return;
+  }
+  if(selectedForOrder.size===0){ alert('No items selected. Check the boxes next to items you want to order.'); return; }
+  // Use the persistent cache so items from EVERY vendor you selected are included,
+  // not just the ones currently visible from the last vendor filter
+  const selectedRows = [...selectedForOrder]
+    .map(item => selectedRowsCache[item])
+    .filter(Boolean)
+    // Group by vendor, then sort alphabetically within each vendor
+    .sort((a,b) => (a.vendor||'').localeCompare(b.vendor||'') || a.item.localeCompare(b.item));
+
+  if(!selectedRows.length){
+    alert('Selected items could not be found in cache. Please re-check the items.');
+    return;
+  }
+
+  const wb=XLSX.utils.book_new();
+  const data=selectedRows.map(r=>({
+    'Item No':r.item,'Description':r.desc,'Vendor':r.vendor,'Vendor Type':r.vtype||'',
+    'Total Sold':r.totalSold,'Monthly Rate':parseFloat(r.monthlyRate.toFixed(1)),
+    'Available':r.avail,'Vendor Order (incoming)':r.vendorOrder,'Net Position':r.netPosition,
+    'Need to Order':r.needToOrder,'Order Qty':r.orderQty||r.needToOrder,'Order Qty':r.orderQty,'Status':r.status,
+    'Qty to Order': r.needToOrder>0?r.needToOrder:''
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  ws['!cols']=[{wch:16},{wch:46},{wch:22},{wch:10},{wch:12},{wch:13},{wch:12},{wch:18},{wch:13},{wch:13},{wch:13},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Current Order');
+
+  // Add a per-vendor summary sheet too
+  const vendorGroups={};
+  selectedRows.forEach(r=>{
+    const v=r.vendor||'Unknown';
+    if(!vendorGroups[v]) vendorGroups[v]={count:0,totalQty:0};
+    vendorGroups[v].count++;
+    vendorGroups[v].totalQty+=r.needToOrder;
+  });
+  const summaryData=Object.entries(vendorGroups).map(([vendor,g])=>({
+    'Vendor':vendor,'Items Selected':g.count,'Total Qty to Order':g.totalQty
+  }));
+  const ws2=XLSX.utils.json_to_sheet(summaryData);
+  ws2['!cols']=[{wch:30},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Vendor Summary');
+
+  XLSX.writeFile(wb,`current_order_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function resetColOrder(){
+  colOrder = COL_DEFS.map(c=>c.id);
+  sortCol=null; sortDir=1;
+  saveColOrder();
+  renderColHeaders();
+  renderTable();
+}
+
+function sortBy(colId){
+  if(dragStarted) return; // don't sort if user was dragging
+  const col=COL_DEFS.find(c=>c.id===colId);
+  if(!col||!col.sortVal) return; // flags column not sortable
+  if(sortCol===colId){
+    sortDir*=-1; // toggle direction
+  } else {
+    sortCol=colId;
+    sortDir=-1; // first click = descending (highest first — most useful)
+  }
+  renderColHeaders();
+  renderTable();
+}
+function getOrderedCols(){
+  return colOrder.map(id=>COL_DEFS.find(c=>c.id===id)).filter(Boolean);
+}
+
+function renderColHeaders(){
+  const row = document.getElementById('col-header-row');
+  if(!row) return;
+  const cols = getOrderedCols();
+  row.innerHTML = cols.map((col,i)=>{
+    const isSorted=sortCol===col.id;
+    const sortClass=isSorted?(sortDir>0?'sort-asc':'sort-desc'):'';
+    const sortable=col.sortVal?'sortable':'';
+    const title=col.sortVal?'Click to sort · Drag to reorder':'Drag to reorder';
+    return`<th class="${col.align==='right'?'num':''} ${sortable} ${sortClass}"
+      draggable="true"
+      data-col="${col.id}"
+      ondragstart="onColDragStart(event,'${col.id}')"
+      ondragover="onColDragOver(event)"
+      ondragleave="onColDragLeave(event)"
+      ondrop="onColDrop(event,'${col.id}')"
+      ondragend="onColDragEnd(event)"
+      onclick="sortBy('${col.id}')"
+      title="${title}"
+    ><span class="col-drag-handle">⠿</span>${col.label}<span class="sort-arrow"></span></th>`;
+  }).join('');
+}
+
+// ── Drag handlers ──────────────────────────────────────────────────
+let dragSrcId = null;
+
+let dragStarted=false;
+function onColDragStart(e, colId){
+  dragSrcId = colId;
+  dragStarted=true;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', colId);
+}
+
+function onColDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onColDragLeave(e){
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onColDrop(e, targetId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(!dragSrcId || dragSrcId === targetId) return;
+  const srcIdx = colOrder.indexOf(dragSrcId);
+  const tgtIdx = colOrder.indexOf(targetId);
+  if(srcIdx<0||tgtIdx<0) return;
+  colOrder.splice(srcIdx,1);
+  colOrder.splice(tgtIdx,0,dragSrcId);
+  saveColOrder();
+  renderColHeaders();
+  renderTable(); // re-render rows in new order
+}
+
+function onColDragEnd(e){
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('thead th').forEach(th=>th.classList.remove('drag-over','dragging'));
+  dragSrcId = null;
+  // Brief flag so onclick doesn't fire sort after a drag
+  setTimeout(()=>{ dragStarted=false; }, 50);
+}
+
+// ── Init column order ──────────────────────────────────────────────
+loadColOrder();
+
+// ══════════════════════════════════════════════════════════════════
+// ANALYSIS PAGE
+// ══════════════════════════════════════════════════════════════════
+let analysisRows = [];
+let activeAnalysisFilter = 'all';
+
+function buildAnalysisRows(){
+  if(!allRows.length) return;
+  analysisRows = [];
+
+  // Get most recent month key in file
+  const allMonthKeys = [];
+  for(const pv of Object.values(prevYearMap)){
+    if(pv.byMonthYear) Object.keys(pv.byMonthYear).forEach(k=>allMonthKeys.push(k));
+  }
+  const sortedMonths = [...new Set(allMonthKeys)].sort((a,b)=>{
+    const [ma,ya]=a.split('/').map(Number), [mb,yb]=b.split('/').map(Number);
+    return (ya*12+ma)-(yb*12+mb);
+  });
+  const latestMonthKey = sortedMonths[sortedMonths.length-1] || '';
+  const [latestMo, latestYr] = latestMonthKey.split('/').map(Number);
+  const latestDate = latestMonthKey ? new Date(latestYr, latestMo-1, 28) : new Date();
+
+  for(const r of allRows){
+    const pym = prevYearMap[r.item];
+    const byMY = pym?.byMonthYear || {};
+
+    // Days since last sale — find most recent month with data
+    let daysSinceLastSale = null;
+    const itemMonths = Object.keys(byMY).sort((a,b)=>{
+      const [ma,ya]=a.split('/').map(Number),[mb,yb]=b.split('/').map(Number);
+      return (yb*12+mb)-(ya*12+ma);
+    });
+    if(itemMonths.length){
+      const [lm,ly] = itemMonths[0].split('/').map(Number);
+      const lastSaleDate = new Date(ly, lm-1, 28);
+      daysSinceLastSale = Math.round((latestDate - lastSaleDate) / 86400000);
+    }
+
+    // Flags
+    const isSlow = daysSinceLastSale !== null && daysSinceLastSale > 60 && r.avail > 0;
+    const isOver = r.coverage >= 6 && r.coverage < 999 && r.avail > 0;
+    const isNew  = itemMonths.length > 0 && itemMonths.length <= 2; // only appeared in 1-2 months
+    
+    // Concentration: check if top customer drove >80% of recent sales
+    const td = salesTrendMap[r.item];
+    let isConcentrated = false;
+    let topCustPct = 0;
+    if(td && td.customers && td.customers.length){
+      const totalRecent = td.customers.reduce((s,c)=>s+c.recentQty,0);
+      if(totalRecent > 0 && td.customers[0]){
+        topCustPct = Math.round(td.customers[0].recentQty/totalRecent*100);
+        isConcentrated = topCustPct >= 80 && td.customers.length >= 2 && totalRecent >= 5;
+      }
+    }
+
+    if(isSlow || isOver || isNew || isConcentrated){
+      analysisRows.push({
+        ...r,
+        daysSinceLastSale,
+        isSlow, isOver, isNew, isConcentrated, topCustPct,
+        topCustName: td?.customers?.[0]?.name || ''
+      });
+    }
+  }
+
+  // Update summary cards
+  const slow = analysisRows.filter(r=>r.isSlow).length;
+  const over = analysisRows.filter(r=>r.isOver).length;
+  const newI = analysisRows.filter(r=>r.isNew).length;
+  const conc = analysisRows.filter(r=>r.isConcentrated).length;
+  const setV = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  setV('an-slow',slow); setV('an-over',over); setV('an-new',newI); setV('an-conc',conc);
+
+  renderAnalysisTable();
+}
+
+function setAnalysisFilter(f, el){
+  activeAnalysisFilter = f;
+  document.querySelectorAll('[data-af]').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderAnalysisTable();
+}
+
+function renderAnalysisTable(){
+  const tbody = document.getElementById('analysis-body');
+  if(!tbody) return;
+
+  const itemQA=(document.getElementById('item-search-analysis')?.value||'').trim().toLowerCase();
+  let rows = analysisRows;
+  if(itemQA) rows=rows.filter(r=>r.item.toLowerCase().includes(itemQA)||
+                                   (r.desc&&r.desc.toLowerCase().includes(itemQA)));
+  if(activeAnalysisFilter !== 'all'){
+    rows = rows.filter(r=>{
+      if(activeAnalysisFilter==='slow') return r.isSlow;
+      if(activeAnalysisFilter==='over') return r.isOver;
+      if(activeAnalysisFilter==='new')  return r.isNew;
+      if(activeAnalysisFilter==='conc') return r.isConcentrated;
+      return true;
+    });
+  }
+
+  if(!rows.length){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ink3)">No items match this filter.</td></tr>`;
+    return;
+  }
+
+  // Store filtered rows for click access
+  window._anRows = rows;
+  tbody.innerHTML = rows.map((r,ri)=>{
+    const flags = [];
+    if(r.isSlow) flags.push(`<span class="flag-slow badge-clickable" onclick="showAnalysisDetail(${ri},'slow')">🐢 ${r.daysSinceLastSale}d no sale</span>`);
+    if(r.isOver) flags.push(`<span class="flag-over badge-clickable" onclick="showAnalysisDetail(${ri},'over')">📦 ${r.coverage.toFixed(1)}mo stock</span>`);
+    if(r.isNew)  flags.push(`<span class="flag-new badge-clickable" onclick="showAnalysisDetail(${ri},'new')">✨ New item</span>`);
+    if(r.isConcentrated) flags.push(`<span class="flag-conc badge-clickable" onclick="showAnalysisDetail(${ri},'conc')">⚠ ${r.topCustPct}% one customer</span>`);
+    const covColor = r.coverage>=12?'var(--blue-dk)':r.coverage>=6?'var(--amber)':'inherit';
+    const dssColor = r.daysSinceLastSale>90?'var(--red)':r.daysSinceLastSale>60?'var(--amber)':'inherit';
+    return `<tr>
+      <td class="item">${r.item}</td>
+      <td class="desc">${r.desc}</td>
+      <td class="vnd">${r.vendor}</td>
+      <td class="num">${r.monthlyRate.toFixed(1)}</td>
+      <td class="num" style="color:${covColor};font-weight:700">${r.coverage>=999?'—':r.coverage.toFixed(1)}</td>
+      <td class="num" style="color:${dssColor};font-weight:700">${r.daysSinceLastSale!==null?r.daysSinceLastSale+'d':'—'}</td>
+      <td class="num">${r.totalSold.toLocaleString()}</td>
+      <td>${flags.join(' ')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportAnalysis(){
+  if(!analysisRows.length){ alert('No analysis data. Run Analysis first.'); return; }
+  const wb = XLSX.utils.book_new();
+  const data = analysisRows.map(r=>({
+    'Item No':r.item,'Description':r.desc,'Vendor':r.vendor,
+    'Monthly Rate':r.monthlyRate.toFixed(1),
+    'Coverage (mo)':r.coverage>=999?'—':r.coverage.toFixed(1),
+    'Days Since Sale':r.daysSinceLastSale!==null?r.daysSinceLastSale:'—',
+    'Total Sold':r.totalSold,
+    'Slow Mover':r.isSlow?'Yes':'',
+    'Overstock':r.isOver?'Yes':'',
+    'New Item':r.isNew?'Yes':'',
+    'Customer Concentrated':r.isConcentrated?r.topCustPct+'% ('+r.topCustName+')':''
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols']=[{wch:16},{wch:46},{wch:22},{wch:12},{wch:13},{wch:14},{wch:12},{wch:10},{wch:10},{wch:10},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Inventory Analysis');
+  XLSX.writeFile(wb, `inventory_analysis_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e=>{
+  // Don't fire when typing in inputs
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+
+  // Arrow keys: cycle through vendors
+  if(e.key==='ArrowRight' || e.key==='ArrowLeft'){
+    e.preventDefault();
+    const dd = document.getElementById('vendor-dropdown');
+    const cur = document.getElementById('vendor-filter').value;
+    const list = _vendorListFiltered.length ? _vendorListFiltered : allVendors;
+    if(!list.length) return;
+    const idx = cur ? list.indexOf(cur) : -1;
+    let next;
+    if(e.key==='ArrowRight') next = list[Math.min(idx+1, list.length-1)];
+    else next = idx<=0 ? '' : list[Math.max(idx-1, 0)];
+    document.getElementById('vendor-filter').value = next||'';
+    document.getElementById('vendor-search').value = next||'';
+    onVendorChange();
+  }
+
+  // R = Run Analysis
+  if(e.key==='r' || e.key==='R'){
+    const btn = document.getElementById('btn-run');
+    if(btn && !btn.disabled) runAnalysis();
+  }
+
+  // 1/2/3 = switch tabs
+  if(e.key==='1') document.querySelector('.nav-tab')?.click();
+  if(e.key==='2') document.querySelectorAll('.nav-tab')[1]?.click();
+  if(e.key==='3') document.querySelectorAll('.nav-tab')[2]?.click();
+});
+
+
+function showAnalysisDetail(ri, flagType){
+  const r = (window._anRows||[])[ri];
+  if(!r) return;
+  const pym = prevYearMap[r.item];
+  const td  = salesTrendMap[r.item];
+  const byMY = pym?.byMonthYear || {};
+
+  // Sort months chronologically for bar chart
+  const sortedMonths = Object.entries(byMY).sort((a,b)=>{
+    const [ma,ya]=a[0].split('/').map(Number),[mb,yb]=b[0].split('/').map(Number);
+    return (ya*12+ma)-(yb*12+mb);
+  });
+  const maxQty = Math.max(...sortedMonths.map(([,v])=>v), 1);
+
+  // Build monthly bar chart
+  const monthBars = sortedMonths.map(([mo,qty])=>{
+    const pw = Math.round(qty/maxQty*100);
+    const [m,y] = mo.split('/').map(Number);
+    const label = MONTHS_SHORT[m-1]+' '+y;
+    return `<div class="dm-bar-row">
+      <div class="dm-bar-label" style="width:58px;font-size:10px">${label}</div>
+      <div class="dm-bar-track"><div class="dm-bar-fill" style="width:${pw}%;background:var(--blue)"></div></div>
+      <div class="dm-bar-val">${qty.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+
+  let icon='🔍', title='', body='';
+
+  if(flagType==='slow'){
+    icon='🐢';
+    title='Slow Mover — '+r.item;
+    const lastSaleMonth = sortedMonths.length ? sortedMonths[sortedMonths.length-1][0] : '—';
+    const [lm,ly] = lastSaleMonth.split('/').map(Number);
+    const lastLabel = MONTHS_SHORT[lm-1]+' '+ly;
+    body = `
+      <div class="dm-section"><div class="dm-stat-row">
+        <div class="dm-stat red"><div class="ds-val">${r.daysSinceLastSale}d</div><div class="ds-lbl">Days Since Last Sale</div></div>
+        <div class="dm-stat"><div class="ds-val">${lastLabel}</div><div class="ds-lbl">Last Sold Month</div></div>
+        <div class="dm-stat amber"><div class="ds-val">${r.avail.toLocaleString()}</div><div class="ds-lbl">Units Available</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Avg Monthly Rate</div></div>
+      </div></div>
+      <div class="dm-section"><div class="dm-note amber">
+        No sales recorded in <strong>${r.daysSinceLastSale} days</strong>, but <strong>${r.avail.toLocaleString()} units</strong> are still available.
+        Consider markdowns, promotions, or moving this stock to a faster-moving location.
+      </div></div>
+      <div class="dm-section"><div class="dm-section-title">Monthly Sales History</div>${monthBars||'<div style="color:var(--ink3);font-size:12px">No monthly data</div>'}</div>`;
+  }
+
+  else if(flagType==='over'){
+    icon='📦';
+    title='Overstock — '+r.item;
+    const excessMonths = (r.coverage - 3).toFixed(1);
+    const excessUnits = Math.round((r.coverage - 3) * r.monthlyRate);
+    body = `
+      <div class="dm-section"><div class="dm-stat-row">
+        <div class="dm-stat" style="border-left-color:var(--blue)"><div class="ds-val" style="color:var(--blue)">${r.coverage.toFixed(1)}mo</div><div class="ds-lbl">Current Coverage</div></div>
+        <div class="dm-stat amber"><div class="ds-val">${excessMonths}mo</div><div class="ds-lbl">Excess Over 3mo</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.avail.toLocaleString()}</div><div class="ds-lbl">Units Available</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Monthly Rate</div></div>
+      </div></div>
+      <div class="dm-section"><div class="dm-note" style="border-left-color:var(--blue);background:var(--blue-lt)">
+        You have <strong>${r.coverage.toFixed(1)} months</strong> of stock — <strong>${excessMonths} months more</strong> than a healthy 3-month buffer.
+        That's roughly <strong>${excessUnits.toLocaleString()} excess units</strong>. Consider pausing reorders until coverage drops below 3–4 months.
+      </div></div>
+      <div class="dm-section"><div class="dm-section-title">Monthly Sales History</div>${monthBars||'<div style="color:var(--ink3);font-size:12px">No monthly data</div>'}</div>`;
+  }
+
+  else if(flagType==='new'){
+    icon='✨';
+    title='New Item — '+r.item;
+    const firstMonth = sortedMonths.length ? sortedMonths[0][0] : '—';
+    const [fm,fy] = firstMonth.split('/').map(Number);
+    const firstLabel = MONTHS_SHORT[fm-1]+' '+fy;
+    body = `
+      <div class="dm-section"><div class="dm-stat-row">
+        <div class="dm-stat green"><div class="ds-val">${firstLabel}</div><div class="ds-lbl">First Appeared</div></div>
+        <div class="dm-stat"><div class="ds-val">${sortedMonths.length}</div><div class="ds-lbl">Months With Sales</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.totalSold.toLocaleString()}</div><div class="ds-lbl">Total Sold</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Monthly Rate</div></div>
+      </div></div>
+      <div class="dm-section"><div class="dm-note green">
+        This item first appeared in <strong>${firstLabel}</strong> and has only sold in <strong>${sortedMonths.length} month(s)</strong>.
+        Watch this item — it may be growing or it may be a one-time order. Consider stocking conservatively until the trend is clear.
+      </div></div>
+      <div class="dm-section"><div class="dm-section-title">Monthly Sales History</div>${monthBars||'<div style="color:var(--ink3);font-size:12px">No monthly data</div>'}</div>`;
+  }
+
+  else if(flagType==='conc'){
+    icon='⚠';
+    title='Customer Concentrated — '+r.item;
+    const topCust = td?.customers?.[0];
+    const custRows = (td?.customers||[]).slice(0,8).map(c=>{
+      const pct = td.customers.reduce((s,x)=>s+x.recentQty,0);
+      const cp = pct>0 ? Math.round(c.recentQty/pct*100) : 0;
+      const pw = cp;
+      return `<div class="dm-bar-row">
+        <div style="flex:1;min-width:0;font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.name}">${c.name||c.code}</div>
+        <div style="width:80px;margin:0 8px"><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pw}%;height:100%;background:${cp>=80?'var(--red)':'var(--blue)'};border-radius:3px"></div></div></div>
+        <div style="font-size:11px;font-weight:800;color:var(--ink);font-family:'JetBrains Mono',monospace;width:40px;text-align:right">${cp}%</div>
+        <div style="font-size:11px;color:var(--ink3);width:40px;text-align:right">${c.recentQty}</div>
+      </div>`;
+    }).join('');
+    body = `
+      <div class="dm-section"><div class="dm-stat-row">
+        <div class="dm-stat red"><div class="ds-val">${r.topCustPct}%</div><div class="ds-lbl">Top Customer Share</div></div>
+        <div class="dm-stat"><div class="ds-val">${topCust?.name?.split(' ')[0]||'—'}</div><div class="ds-lbl">Top Customer</div></div>
+        <div class="dm-stat"><div class="ds-val">${(td?.customers||[]).length}</div><div class="ds-lbl">Total Customers</div></div>
+        <div class="dm-stat"><div class="ds-val">${r.monthlyRate.toFixed(1)}</div><div class="ds-lbl">Monthly Rate</div></div>
+      </div></div>
+      <div class="dm-section"><div class="dm-note amber">
+        <strong>${r.topCustPct}%</strong> of recent sales came from a single customer: <strong>${topCust?.name||'—'}</strong>.
+        If this customer stops ordering, your demand forecast for this item could drop significantly. Consider diversifying or adjusting your reorder qty.
+      </div></div>
+      <div class="dm-section"><div class="dm-section-title">Customer Breakdown (Recent Period)</div>${custRows}</div>`;
+  }
+
+  document.getElementById('dm-icon').textContent = icon;
+  document.getElementById('dm-title').textContent = title;
+  document.getElementById('dm-subtitle').textContent = r.desc;
+  document.getElementById('dm-body').innerHTML = body;
+  openDetail();
+}
+
+
+function setOrderQty(item, val, inputEl){
+  const qty = Math.max(0, parseInt(val)||0);
+  // Update in allRows
+  const row = allRows.find(r=>r.item===item);
+  if(row) row.orderQty = qty;
+  // Update in selectedRowsCache
+  if(selectedRowsCache[item]) selectedRowsCache[item].orderQty = qty;
+  // Update input appearance
+  if(inputEl){
+    inputEl.value = qty;
+    const suggested = row ? row.needToOrder : 0;
+    inputEl.className = 'oqty-input'+(qty!==suggested?' edited':qty===0?' zero':'');
+  }
+  if(typeof updateLoadBar==='function') updateLoadBar();
+}
+
+function resetOrderQtys(){
+  allRows.forEach(r=>{ r.orderQty = r.needToOrder; if(selectedRowsCache[r.item]) selectedRowsCache[r.item].orderQty = r.needToOrder; });
+  renderTable();
+}
+
+renderHolidays();
+renderSavedTags();
+renderColHeaders();
+// Restore CBM file name display if data was saved
+if(Object.keys(cbmData).length>0){
+  const el=document.getElementById('cbm-file-name');
+  if(el) el.textContent='(' + Object.keys(cbmData).length + ' items saved)';
+  updateLoadBar();
+}
+// Restore fill-in map display if data was saved
+if(Object.keys(fillInMap).length>0){
+  const el2=document.getElementById('fillin-name');
+  if(el2) el2.textContent='(' + Object.keys(fillInMap).length + ' mappings saved)';
+}
+
+// Restore uploaded files from IndexedDB (async, no size limit)
+(async function restoreFiles(){
+  let stockOk=false, salesOk=false;
+
+  // ── Stock ────────────────────────────────────────────────
+  try{
+    const _sn=localStorage.getItem('stock_name_v1');
+    const rows=await idbLoad('stock_data_v1');
+    if(_sn && rows && rows.length){
+      stockData=rows;
+      const el=document.getElementById('stock-name');
+      if(el) el.textContent='✓ '+_sn+' (saved)';
+      document.getElementById('card-stock')?.classList.add('loaded');
+      extractVendors(stockData);
+      stockOk=true;
+    }
+  }catch(e){ console.warn('stock restore:',e); }
+
+  // ── Sales with dates ─────────────────────────────────────
+  try{
+    const _an=localStorage.getItem('sales_name_v1');
+    const rows=await idbLoad('sales_data_v1');
+    if(_an && rows && rows.length){
+      salesDatedData=rows;
+      window._salesDatedFull=salesDatedData;
+      const el=document.getElementById('salesdated-name');
+      if(el) el.textContent='✓ '+_an+' (saved)';
+      document.getElementById('card-sales-dated')?.classList.add('loaded');
+      buildSalesTrendMap(salesDatedData);
+      const s0=salesDatedData[0]||{};
+      const mColD=Object.keys(s0).find(k=>/^month$/i.test(k))||null;
+      if(mColD){
+        const uniqueMonths=new Set(salesDatedData.map(r=>{
+          const v=r[mColD];
+          if(v instanceof Date) return (v.getUTCMonth()+1)+'/'+v.getUTCFullYear();
+          return String(v||'').trim();
+        }).filter(Boolean));
+        populateDateDropdowns([...uniqueMonths]);
+      }
+      salesOk=true;
+    }
+  }catch(e){ console.warn('sales restore:',e); }
+
+  // ── Fill-in raw rows ──────────────────────────────────────
+  try{
+    const _fn=localStorage.getItem('fillin_name_v1');
+    const rows=await idbLoad('fillin_data_v1');
+    if(_fn && rows && rows.length){
+      fillInData=rows;
+      const el=document.getElementById('fillin-name');
+      if(el) el.textContent='✓ '+_fn+' (saved)';
+      document.getElementById('card-fillin')?.classList.add('loaded');
+    }
+  }catch(e){ console.warn('fillin restore:',e); }
+
+  // Enable run button if we have the minimum needed files
+  if(stockOk && salesOk){
+    document.getElementById('btn-run')?.removeAttribute('disabled');
+  }
+})();
+
+function exportWithLoads(){
+  const wb = XLSX.utils.book_new();
+  const headers = ['Load','Item No','Description','Vendor','Order Qty','CBM/ctn','Row CBM'];
+  const data = [headers];
+  completedOrders.forEach((load, li) => {
+    load.items.forEach(it => {
+      data.push(['Load '+(li+1), it.item, it.desc, it.vendor, it.orderQty, it.cbmPer||'', it.rowCbm?parseFloat(it.rowCbm.toFixed(2)):'']);
+    });
+    data.push(['','','','LOAD '+(li+1)+' TOTAL','',load.totalCtns+' ctns',load.totalCbm+' CBM']);
+    data.push(['','','','','','','']);
+  });
+  const currentItems = allRows.filter(r=>r.orderQty>0);
+  if(currentItems.length){
+    currentItems.forEach(r => {
+      const cp=cbmData[r.item]||0;
+      data.push(['Current',r.item,r.desc,r.vendor,r.orderQty,cp||'',cp>0?parseFloat((r.orderQty*cp).toFixed(2)):'']);
+    });
+    const cc=currentItems.reduce((s,r)=>s+r.orderQty,0);
+    const ccb=currentItems.reduce((s,r)=>s+(r.orderQty*(cbmData[r.item]||0)),0);
+    data.push(['','','','CURRENT TOTAL','',cc+' ctns',parseFloat(ccb.toFixed(2))+' CBM']);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:10},{wch:18},{wch:35},{wch:25},{wch:10},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Orders by Load');
+  XLSX.writeFile(wb,'orders_by_load.xlsx');
+}
+
+function downloadVendorSettings(){
+  const rows = [['Vendor','Type','Lead Time (months)']];
+  Object.entries(vendorSettings).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([v,s])=>{
+    rows.push([v, s.type||'', s.lt||3.5]);
+  });
+  if(rows.length===1){ alert('No vendor settings saved yet.'); return; }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:35},{wch:20},{wch:20}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vendor Settings');
+  XLSX.writeFile(wb, 'vendor_settings.xlsx');
+}
+
+function importVendorSettings(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      let count = 0;
+      rows.forEach(row => {
+        const keys = Object.keys(row);
+        // Find columns flexibly
+        const vendorKey = keys.find(k=>/vendor/i.test(k)) || keys[0];
+        const typeKey   = keys.find(k=>/type/i.test(k))   || keys[1];
+        const ltKey     = keys.find(k=>/lead/i.test(k))   || keys[2];
+        const v = String(row[vendorKey]||'').trim();
+        if(!v) return;
+        const lt = parseFloat(row[ltKey]);
+        vendorSettings[v] = {
+          type: String(row[typeKey]||'').trim(),
+          lt:   isNaN(lt) ? 3.5 : lt
+        };
+        count++;
+      });
+      saveLS();
+      renderSavedTags();
+      alert('Imported ' + count + ' vendor settings.');
+      input.value = '';
+    } catch(err){ alert('Error reading file: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+let _activeLdIdx = -1;
+
+function showCompletedLoads(){
+  const ov = document.getElementById('load-mgr-overlay');
+  ov.style.display = 'flex';
+  setTimeout(()=>ov.classList.add('show'),10);
+  renderLoadList();
+  if(completedOrders.length>0) selectLoad(0);
+  else document.getElementById('load-detail-panel').innerHTML =
+    '<div style="text-align:center;color:var(--ink3);padding:40px 0;font-size:13px">No completed loads yet.</div>';
+}
+
+function closeLoadMgr(){
+  const ov = document.getElementById('load-mgr-overlay');
+  ov.classList.remove('show');
+  setTimeout(()=>{ ov.style.display='none'; }, 200);
+}
+
+function renderLoadList(){
+  const panel = document.getElementById('load-list-panel');
+  const sub   = document.getElementById('load-mgr-subtitle');
+  const n = completedOrders.length;
+  sub.textContent = n + ' load'+(n!==1?'s':'')+' completed';
+
+  if(!n){
+    panel.innerHTML = '<div style="padding:12px;font-size:11px;color:var(--ink3);text-align:center">No loads yet</div>';
+    return;
+  }
+
+  // Total CBM across all loads
+  const totalAllCbm = completedOrders.reduce((s,l)=>s+l.totalCbm,0);
+  const totalAllCtns= completedOrders.reduce((s,l)=>s+l.totalCtns,0);
+  document.getElementById('load-mgr-footer-info').textContent =
+    'Total: '+totalAllCtns.toLocaleString()+' ctns | '+totalAllCbm.toFixed(1)+' CBM across all loads';
+
+  panel.innerHTML = completedOrders.map((load,i)=>{
+    const pct = Math.min(100,(load.totalCbm/68)*100);
+    const active = i===_activeLdIdx;
+    return `<div onclick="selectLoad(${i})" style="padding:10px 10px;border-radius:8px;cursor:pointer;margin-bottom:4px;
+        border:1.5px solid ${active?'var(--blue)':'transparent'};
+        background:${active?'rgba(59,130,246,.08)':'transparent'};transition:all .15s">
+      <div style="font-size:12px;font-weight:800;color:${active?'var(--blue-dk)':'var(--ink)'};margin-bottom:2px">
+        Load ${i+1}
+      </div>
+      <div style="font-size:10px;color:var(--ink3);margin-bottom:5px">
+        ${load.totalCtns} ctns · ${load.totalCbm.toFixed(1)} CBM
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${pct>=100?'#ef4444':pct>=85?'#f59e0b':'#10b981'};border-radius:3px"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectLoad(idx){
+  _activeLdIdx = idx;
+  renderLoadList();
+  renderLoadDetail(idx);
+}
+
+function renderLoadDetail(idx){
+  const load = completedOrders[idx];
+  const panel = document.getElementById('load-detail-panel');
+  const pct = Math.min(100,(load.totalCbm/68)*100);
+  const barColor = pct>=100?'#ef4444':pct>=85?'#f59e0b':'#10b981';
+
+  let rows = load.items.map((it,ii)=>`
+    <tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--blue-dk);font-family:'JetBrains Mono',monospace">${it.item}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--ink2);max-width:180px">${it.desc}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--ink3)">${it.vendor||''}</td>
+      <td style="padding:8px 10px;text-align:right">
+        <input type="number" min="0" value="${it.orderQty}"
+          onchange="editLoadItem(${idx},${ii},this.value)"
+          style="width:64px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;
+            font-size:12px;font-weight:700;text-align:right;font-family:'JetBrains Mono',monospace;
+            background:var(--bg);color:var(--ink);outline:none"
+          onclick="event.stopPropagation()">
+      </td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;font-weight:600;color:#10b981">
+        ${it.cbmPer>0?(it.orderQty*it.cbmPer).toFixed(2):'—'}
+      </td>
+      <td style="padding:8px 10px;text-align:center">
+        <span onclick="removeLoadItem(${idx},${ii})" title="Remove item"
+          style="cursor:pointer;color:var(--red);font-size:14px;font-weight:700;opacity:.6;transition:opacity .15s"
+          onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">✕</span>
+      </td>
+    </tr>`).join('');
+
+  panel.innerHTML = `
+    <!-- CBM Bar -->
+    <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:800;color:var(--ink)">Load ${idx+1} Summary</span>
+        <span style="font-size:12px;font-weight:700;color:${barColor}">${load.totalCbm.toFixed(1)} / 68 CBM</span>
+      </div>
+      <div style="height:10px;background:rgba(0,0,0,.08);border-radius:5px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:5px;transition:width .3s"></div>
+      </div>
+      <div style="display:flex;gap:20px;font-size:11px;color:var(--ink3)">
+        <span>📦 ${load.totalCtns.toLocaleString()} cartons</span>
+        <span>📐 ${load.totalCbm.toFixed(2)} CBM</span>
+        <span>🏷 ${load.items.length} items</span>
+      </div>
+    </div>
+    <!-- Items table -->
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:#f1f5f9">
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase">Item</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase">Description</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase">Vendor</th>
+          <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase">Qty</th>
+          <th style="padding:7px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase">CBM</th>
+          <th style="padding:7px 10px;width:30px"></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <!-- Actions -->
+    <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <button onclick="removeLoad(${idx})"
+        style="padding:7px 16px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:20px;
+          font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        🗑 Remove Load ${idx+1}
+      </button>
+      <button onclick="exportSingleLoad(${idx})"
+        style="padding:7px 16px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:20px;
+          font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        ⬇ Export Load ${idx+1}
+      </button>
+    </div>`;
+}
+
+function editLoadItem(loadIdx, itemIdx, newQty){
+  const load = completedOrders[loadIdx];
+  const item = load.items[itemIdx];
+  const oldQty = item.orderQty;
+  const qty = parseInt(newQty)||0;
+  const diff = qty - oldQty;
+  // Update vendorOrder total for this item
+  const row = allRows.find(r=>r.item===item.item);
+  if(row) row.vendorOrder = Math.max(0,(row.vendorOrder||0)+diff);
+  item.orderQty = qty;
+  item.rowCbm   = qty * (item.cbmPer||0);
+  // Recalculate load totals
+  load.totalCtns = load.items.reduce((s,it)=>s+it.orderQty,0);
+  load.totalCbm  = parseFloat(load.items.reduce((s,it)=>s+(it.rowCbm||0),0).toFixed(2));
+  renderLoadDetail(loadIdx);
+  renderLoadList();
+  renderTable();
+  updateLoadBar();
+}
+
+function removeLoadItem(loadIdx, itemIdx){
+  const load = completedOrders[loadIdx];
+  const item = load.items[itemIdx];
+  // Return qty to vendorOrder
+  const row = allRows.find(r=>r.item===item.item);
+  if(row) row.vendorOrder = Math.max(0,(row.vendorOrder||0)-item.orderQty);
+  load.items.splice(itemIdx,1);
+  load.totalCtns = load.items.reduce((s,it)=>s+it.orderQty,0);
+  load.totalCbm  = parseFloat(load.items.reduce((s,it)=>s+(it.rowCbm||0),0).toFixed(2));
+  if(!load.items.length){ removeLoad(loadIdx); return; }
+  renderLoadDetail(loadIdx);
+  renderLoadList();
+  renderTable();
+  updateLoadBar();
+}
+
+function removeLoad(idx){
+  const load = completedOrders[idx];
+  if(!confirm('Remove Load '+(idx+1)+'? Quantities will be returned to vendor order totals.')) return;
+  load.items.forEach(it=>{
+    const row = allRows.find(r=>r.item===it.item);
+    if(row) row.vendorOrder = Math.max(0,(row.vendorOrder||0)-it.orderQty);
+  });
+  completedOrders.splice(idx,1);
+  _activeLdIdx = Math.min(_activeLdIdx, completedOrders.length-1);
+  renderLoadList();
+  if(completedOrders.length>0) selectLoad(_activeLdIdx>=0?_activeLdIdx:0);
+  else document.getElementById('load-detail-panel').innerHTML =
+    '<div style="text-align:center;color:var(--ink3);padding:40px 0;font-size:13px">No loads remaining.</div>';
+  renderTable();
+  updateLoadBar();
+}
+
+function exportSingleLoad(idx){
+  const load = completedOrders[idx];
+  const wb = XLSX.utils.book_new();
+  const headers = ['Item No','Description','Vendor','Order Qty','CBM/ctn','Row CBM'];
+  const data = [headers];
+  load.items.forEach(it=>{
+    data.push([it.item,it.desc,it.vendor||'',it.orderQty,it.cbmPer||'',
+      it.rowCbm?parseFloat(it.rowCbm.toFixed(2)):'']);
+  });
+  data.push(['','','TOTAL',load.totalCtns,'',parseFloat(load.totalCbm.toFixed(2))]);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[{wch:18},{wch:35},{wch:22},{wch:10},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws,'Load '+(idx+1));
+  XLSX.writeFile(wb,'load_'+(idx+1)+'.xlsx');
+}
+
+// ── Date range helpers ────────────────────────────────────────────────────
+
+function parseMonthStr(s){
+  // Accepts "M/YYYY" or Date object
+  if(!s) return null;
+  if(s instanceof Date){ return {m:s.getUTCMonth()+1, y:s.getUTCFullYear()}; }
+  const str=String(s).trim();
+  const parts=str.split('/');
+  if(parts.length===2){
+    const m=parseInt(parts[0]); const y=parseInt(parts[1]);
+    if(!isNaN(m)&&!isNaN(y)) return{m,y};
+  }
+  return null;
+}
+
+function monthSortVal(str){ const p=parseMonthStr(str); return p?p.y*100+p.m:0; }
+
+function fmtMonthLabel(str){
+  const p=parseMonthStr(str); if(!p) return str;
+  const names=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return (names[p.m]||p.m)+' '+p.y;
+}
+
+function populateDateDropdowns(monthStrs){
+  // Sort chronologically
+  const sorted=[...new Set(monthStrs.map(s=>{
+    const p=parseMonthStr(s);
+    return p?(p.m+'/'+p.y):s;
+  }).filter(Boolean))].sort((a,b)=>monthSortVal(a)-monthSortVal(b));
+
+  const fromEl=document.getElementById('date-from');
+  const toEl=document.getElementById('date-to');
+  if(!fromEl||!toEl) return;
+
+  const fromVal=fromEl.value; const toVal=toEl.value;
+
+  fromEl.innerHTML='<option value="">From (oldest)</option>'+
+    sorted.map(s=>`<option value="${s}">${fmtMonthLabel(s)}</option>`).join('');
+  toEl.innerHTML='<option value="">To (latest)</option>'+
+    [...sorted].reverse().map(s=>`<option value="${s}">${fmtMonthLabel(s)}</option>`).join('');
+
+  // Restore previous selection or default to last 12 months
+  if(fromVal && sorted.includes(fromVal)) fromEl.value=fromVal;
+  if(toVal   && sorted.includes(toVal))   toEl.value=toVal;
+
+  // Default: from = 12 months before last date, to = last date
+  if(!fromEl.value && sorted.length){
+    const last=sorted[sorted.length-1];
+    const lp=parseMonthStr(last);
+    if(lp){
+      let fm=lp.m-11; let fy=lp.y;
+      if(fm<=0){fm+=12;fy--;}
+      const defaultFrom=fm+'/'+fy;
+      const match=sorted.find(s=>monthSortVal(s)>=monthSortVal(defaultFrom));
+      if(match) fromEl.value=match;
+    }
+    toEl.value=last;
+  }
+  updateMonthsFromDates();
+}
+
+function updateMonthsFromDates(){
+  const fromEl=document.getElementById('date-from');
+  const toEl=document.getElementById('date-to');
+  const info=document.getElementById('date-range-info');
+  if(!fromEl||!toEl) return;
+  const fv=fromEl.value; const tv=toEl.value;
+  if(fv&&tv){
+    const fp=parseMonthStr(fv); const tp=parseMonthStr(tv);
+    if(fp&&tp){
+      const months=Math.max(1,(tp.y-fp.y)*12+(tp.m-fp.m)+1);
+      document.getElementById('months').value=months;
+      if(info) info.textContent=months+' month'+(months!==1?'s':'');
+    }
+  } else if(fv){
+    if(info) info.textContent='From '+fmtMonthLabel(fv)+' to latest';
+  } else if(tv){
+    if(info) info.textContent='Up to '+fmtMonthLabel(tv);
+  } else {
+    if(info) info.textContent='All dates';
+  }
+}
+
+// Copy to clipboard helper
+function copyToClipboard(text, btn){
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent;
+    btn.textContent='✓';
+    btn.style.color='#22c55e';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; },1200);
+  }).catch(()=>{
+    // Fallback
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    const orig=btn.textContent;
+    btn.textContent='✓'; btn.style.color='#22c55e';
+    setTimeout(()=>{ btn.textContent=orig; btn.style.color=''; },1200);
+  });
+}
+
+
+// ── CBM functions ─────────────────────────────────────────────────────────
+
+function loadCBMFile(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      cbmData = {};
+      rows.forEach(row => {
+        // Find item# column (flexible naming)
+        const keys = Object.keys(row);
+        const itemKey = keys.find(k => /item.*no|item.*#|item.*num|^item$/i.test(k)) || keys[0];
+        const cbmKey  = keys.find(k => /cbm/i.test(k)) || keys[1];
+        const item = String(row[itemKey]).trim();
+        const cbm  = parseFloat(row[cbmKey]);
+        if(item && !isNaN(cbm) && cbm>0) cbmData[item] = cbm;
+      });
+      document.getElementById('cbm-file-name').textContent = file.name + ' (' + Object.keys(cbmData).length + ' items)';
+      console.log('CBM data loaded:', Object.keys(cbmData).length, 'items');
+      saveCBM();
+      renderTable();
+      updateLoadBar();
+    } catch(err){ alert('Error reading CBM file: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updateLoadBar(){
+  const bar = document.getElementById('load-builder-bar');
+  if(!bar) return;
+  const hasCbm = Object.keys(cbmData).length > 0;
+
+  // Show bar whenever there are order quantities OR completed loads
+  let totalCtns = 0, totalCbm = 0, checkedNoQty = 0;
+  allRows.forEach(r => {
+    const qty = r.orderQty || 0;
+    const cbmPer = cbmData[r.item] || 0;
+    if(qty > 0){ totalCtns += qty; totalCbm += qty * cbmPer; }
+    else if(selectedForOrder.has(r.item)) checkedNoQty++;
+  });
+
+  const hasActivity = totalCtns > 0 || checkedNoQty > 0 || completedOrders.length > 0;
+  bar.style.display = hasActivity ? 'block' : 'none';
+  if(!hasActivity) return;
+
+  const MAX_CBM = 68;
+  const pct = hasCbm ? Math.min(100, (totalCbm / MAX_CBM) * 100) : 0;
+
+  const checkedLabel = checkedNoQty > 0 ? ' + ' + checkedNoQty + ' pending' : '';
+  document.getElementById('load-ctns-display').textContent = totalCtns.toLocaleString() + ' ctns' + checkedLabel;
+  document.getElementById('load-cbm-display').textContent = hasCbm && totalCbm > 0
+    ? totalCbm.toFixed(1) + ' / ' + MAX_CBM + ' CBM'
+    : checkedNoQty > 0 ? checkedNoQty + ' item'+(checkedNoQty>1?'s':'')+' checked, qty TBD'
+    : '';
+  document.getElementById('load-progress-bar').style.width = pct + '%';
+  document.getElementById('load-progress-bar').style.background =
+    pct >= 100 ? 'linear-gradient(90deg,#ef4444,#dc2626)' :
+    pct >= 85  ? 'linear-gradient(90deg,#f59e0b,#d97706)' :
+                 'linear-gradient(90deg,#3b82f6,#10b981)';
+
+  const done = completedOrders.length;
+  document.getElementById('completed-loads-count').textContent =
+    done > 0 ? done + ' load'+(done>1?'s':'')+' done — click to manage' : '';
+  // Also update the always-visible badge
+  const badge = document.getElementById('loads-badge');
+  if(badge){
+    badge.textContent = done;
+    badge.style.display = done > 0 ? 'inline' : 'none';
+  }
+}
+
+function markLoadDone(){
+  // Collect rows that have qty > 0 OR are checked (selectedForOrder)
+  const items = [];
+  let totalCtns = 0, totalCbm = 0;
+  allRows.forEach(r => {
+    const qty = r.orderQty || 0;
+    const isChecked = selectedForOrder.has(r.item);
+    // Include if has qty OR is checked
+    if(qty > 0 || isChecked){
+      const cbmPer = cbmData[r.item] || 0;
+      items.push({
+        item:r.item, desc:r.desc, vendor:r.vendor,
+        orderQty:qty, cbmPer:cbmPer, rowCbm:qty*cbmPer
+      });
+      totalCtns += qty; totalCbm += qty*cbmPer;
+    }
+  });
+  if(!items.length){ alert('No items selected or quantities entered for this load.'); return; }
+
+  // Save completed order
+  completedOrders.push({ items, totalCtns, totalCbm:parseFloat(totalCbm.toFixed(2)) });
+  const loadIdx = completedOrders.length - 1;
+
+  // Add qty to vendorOrder totals and clear qty fields
+  items.forEach(it => {
+    const row = allRows.find(r => r.item === it.item);
+    if(row){
+      row.vendorOrder = (row.vendorOrder || 0) + it.orderQty;
+      row.orderQty = 0;
+      if(selectedRowsCache[row.item]) selectedRowsCache[row.item].orderQty = 0;
+    }
+  });
+
+  // Uncheck selected rows
+  selectedForOrder.clear();
+
+  const zeroQty = items.filter(it=>it.orderQty===0).length;
+  const msg = 'Load ' + completedOrders.length + ' saved!'
+    + (totalCtns > 0 ? ' (' + totalCtns + ' ctns' + (totalCbm>0?', '+totalCbm.toFixed(1)+' CBM':'')+')' : '')
+    + (zeroQty > 0 ? '\n\n' + zeroQty + ' item'+(zeroQty>1?'s have':' has')+' no qty yet — set quantities in the Load Manager.' : '');
+  alert(msg);
+  renderTable();
+  updateLoadBar();
+  // Auto-open load manager so user can fill in quantities
+  if(zeroQty > 0){
+    showCompletedLoads();
+    setTimeout(()=>selectLoad(loadIdx), 200);
+  }
+}
+
+// setOrderQty calls updateLoadBar directly
+
+</script>
+
+
+<!-- ── Order Selection Bar ── -->
+<div class="order-selection-bar" id="order-selection-bar">
+  <span>📦</span>
+  <span class="sel-count" id="order-sel-count">0 items selected</span>
+  <button class="btn-export-selected" onclick="exportSelectedOrder()">⬇ Export Selected to Excel</button> <button style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.3);padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:6px" onclick="resetOrderQtys()" title="Reset all Order Qty back to suggested Need to Order">↺ Reset Qtys</button>
+  <button class="btn-clear-selection" onclick="clearOrderSelection()">✕ Clear</button>
+</div>
+<!-- ── Detail Modal ── -->
+<div class="detail-overlay" id="detail-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-modal" id="detail-modal">
+    <div class="dm-header">
+      <div class="dm-icon" id="dm-icon">📈</div>
+      <div><div class="dm-title" id="dm-title">Detail</div><div class="dm-subtitle" id="dm-subtitle"></div></div>
+      <div class="dm-close" onclick="closeDetail()">✕</div>
+    </div>
+    <div class="dm-body" id="dm-body"></div>
+    <div class="dm-footer"><button class="btn-dm-close" onclick="closeDetail()">Close</button></div>
+  </div>
+</div>
+
+
+<!-- ── Load Manager Modal ─────────────────────────────────────────── -->
+<div class="detail-overlay" id="load-mgr-overlay" onclick="if(event.target===this)closeLoadMgr()" style="display:none">
+  <div class="detail-modal" style="max-width:680px;max-height:88vh;display:flex;flex-direction:column">
+    <!-- Header -->
+    <div class="dm-header" style="background:linear-gradient(135deg,#1a3a5c,#0f2740);color:white">
+      <div class="dm-icon">🚢</div>
+      <div>
+        <div class="dm-title" style="color:white">Load Manager</div>
+        <div class="dm-subtitle" style="color:rgba(255,255,255,.55)" id="load-mgr-subtitle">0 loads completed</div>
+      </div>
+      <div class="dm-close" onclick="closeLoadMgr()" style="color:rgba(255,255,255,.6)">✕</div>
+    </div>
+    <!-- Load list (left) + Detail (right) -->
+    <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+      <!-- Load list -->
+      <div id="load-list-panel" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);
+        overflow-y:auto;background:#f8fafc;padding:8px">
+      </div>
+      <!-- Load detail -->
+      <div id="load-detail-panel" style="flex:1;overflow-y:auto;padding:16px 18px">
+        <div style="text-align:center;color:var(--ink3);padding:40px 0;font-size:13px">
+          Select a load to view details
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div class="dm-footer" style="justify-content:space-between">
+      <button onclick="closeLoadMgr()"
+        style="background:var(--border);color:var(--ink);border:none;padding:8px 20px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">
+        Close
+      </button>
+      <div id="load-mgr-footer-info" style="font-size:11px;color:var(--ink3);align-self:center"></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

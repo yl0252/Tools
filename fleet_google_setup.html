@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fleet Manager — Google Setup Guide</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e3a5f;line-height:1.6;padding:32px 16px;max-width:780px;margin:0 auto}
+h1{font-size:26px;font-weight:800;color:#1e3a5f;margin-bottom:6px}
+.subtitle{font-size:14px;color:#64748b;margin-bottom:36px}
+.step{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:20px;position:relative;border-left:4px solid #0ea5e9}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#0ea5e9;color:#fff;font-size:14px;font-weight:800;border-radius:50%;margin-bottom:12px}
+.step-title{font-size:16px;font-weight:700;color:#1e3a5f;margin-bottom:8px}
+.step p{font-size:13px;color:#475569;margin-bottom:10px}
+.step p:last-child{margin-bottom:0}
+.step ul{font-size:13px;color:#475569;padding-left:20px;margin-bottom:10px}
+.step ul li{margin-bottom:5px}
+.step a{color:#0ea5e9;font-weight:600}
+.highlight{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;font-size:12px;color:#0c4a6e;margin:10px 0;font-weight:500}
+.highlight strong{color:#0ea5e9}
+.code-block{background:#1e3a5f;border-radius:10px;padding:20px;margin:14px 0;overflow-x:auto;position:relative}
+.code-block pre{font-family:'JetBrains Mono','Courier New',monospace;font-size:12px;color:#e2e8f0;white-space:pre;line-height:1.7}
+.code-block .comment{color:#64748b}
+.code-block .keyword{color:#7dd3fc}
+.code-block .string{color:#86efac}
+.copy-btn{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#94a3b8;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit}
+.copy-btn:hover{background:rgba(255,255,255,.2);color:#fff}
+.img-placeholder{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:2px dashed #bae6fd;border-radius:10px;padding:24px;text-align:center;color:#0ea5e9;font-size:13px;margin:12px 0}
+.tip{background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin:10px 0}
+.tip strong{color:#d97706}
+.done{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;font-size:13px;color:#166534;margin-top:24px;text-align:center;font-weight:600}
+.divider{border:none;border-top:1px solid #e2e8f0;margin:28px 0}
+.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:8px;vertical-align:middle;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<h1>🔗 Google Sheets & Drive Setup</h1>
+<p class="subtitle">Connect your Fleet Manager to Google — takes about 5 minutes. No coding knowledge needed.</p>
+
+<!-- STEP 1 -->
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-title">Create a Google Sheet</div>
+  <p>Go to <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> and create a new blank spreadsheet. Name it something like <strong>Fleet Manager Data</strong>.</p>
+  <p>Once it's open, look at the URL in your browser. It will look like this:</p>
+  <div class="highlight">
+    https://docs.google.com/spreadsheets/d/<strong>1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms</strong>/edit
+  </div>
+  <p>The long string of letters and numbers between <code>/d/</code> and <code>/edit</code> is your <strong>Sheet ID</strong>. Copy it — you'll need it in the next step.</p>
+</div>
+
+<!-- STEP 2 -->
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-title">Open Google Apps Script</div>
+  <p>In your Google Sheet, click the menu: <strong>Extensions → Apps Script</strong></p>
+  <p>A new tab will open with a code editor. You'll see a default function — <strong>delete everything</strong> in the editor and paste the code below.</p>
+  <div class="tip"><strong>⚠️ Important:</strong> Replace <code>YOUR_GOOGLE_SHEET_ID</code> on line 1 with the Sheet ID you copied in Step 1.</div>
+  <div class="code-block">
+    <button class="copy-btn" onclick="copyCode()">Copy</button>
+    <pre id="apps-script-code"><span class="keyword">const</span> SHEET_ID     = <span class="string">'YOUR_GOOGLE_SHEET_ID'</span>;  <span class="comment">// ← paste your Sheet ID here</span>
+<span class="keyword">const</span> DRIVE_FOLDER = <span class="string">'Fleet Photos'</span>;          <span class="comment">// photos go in this Drive folder</span>
+
+<span class="keyword">function</span> getOrCreateFolder(name){
+  <span class="keyword">const</span> folders = DriveApp.getFoldersByName(name);
+  <span class="keyword">return</span> folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+}
+
+<span class="keyword">function</span> doGet(e){
+  <span class="keyword">try</span>{
+    <span class="keyword">const</span> ss = SpreadsheetApp.openById(SHEET_ID);
+    <span class="keyword">const</span> sh = ss.getSheetByName(<span class="string">'FleetJSON'</span>);
+    <span class="keyword">if</span>(sh && sh.getLastRow() > 0){
+      <span class="keyword">const</span> chunks = sh.getRange(1,1,sh.getLastRow(),1).getValues();
+      <span class="keyword">const</span> json   = chunks.map(r => r[0]).join(<span class="string">''</span>);
+      <span class="keyword">return</span> ContentService.createTextOutput(json)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    <span class="keyword">return</span> ContentService.createTextOutput(
+      JSON.stringify({error:<span class="string">'No data yet. Save from the desktop tool first.'</span>})
+    );
+  }<span class="keyword">catch</span>(e){
+    <span class="keyword">return</span> ContentService.createTextOutput(JSON.stringify({error:e.message}));
+  }
+}
+
+<span class="keyword">function</span> doPost(e){
+  <span class="keyword">try</span>{
+    <span class="keyword">const</span> p = JSON.parse(e.postData.contents);
+
+    <span class="comment">// ── Photo upload → saves to Google Drive ─────────────────────────</span>
+    <span class="keyword">if</span>(p.action === <span class="string">'uploadPhoto'</span>){
+      <span class="keyword">const</span> folder = getOrCreateFolder(DRIVE_FOLDER);
+      <span class="keyword">const</span> blob   = Utilities.newBlob(
+        Utilities.base64Decode(p.photo),
+        p.mimeType || <span class="string">'image/jpeg'</span>,
+        p.filename  || <span class="string">'photo.jpg'</span>
+      );
+      <span class="keyword">const</span> file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      <span class="keyword">const</span> url = <span class="string">'https://drive.google.com/file/d/'</span> + file.getId() + <span class="string">'/view'</span>;
+      <span class="keyword">return</span> ContentService.createTextOutput(JSON.stringify({url}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    <span class="comment">// ── Checklist submission → saves to Checklists sheet ─────────────</span>
+    <span class="keyword">if</span>(p.action === <span class="string">'checklist'</span>){
+      <span class="keyword">const</span> ss = SpreadsheetApp.openById(SHEET_ID);
+      <span class="keyword">let</span> sh = ss.getSheetByName(<span class="string">'Checklists'</span>);
+      <span class="keyword">if</span>(!sh){
+        sh = ss.insertSheet(<span class="string">'Checklists'</span>);
+        sh.appendRow([<span class="string">'Date'</span>,<span class="string">'Vehicle'</span>,<span class="string">'Driver'</span>,<span class="string">'All Passed'</span>,<span class="string">'Notes'</span>,<span class="string">'Photo URL'</span>,<span class="string">'Submitted At'</span>]);
+      }
+      <span class="keyword">const</span> r = p.record;
+      sh.appendRow([r.date, r.vehiclePlate, r.driver,
+        r.allPassed ? <span class="string">'YES'</span> : <span class="string">'NO'</span>, r.notes||<span class="string">''</span>, r.photoUrl||<span class="string">''</span>, r.submittedAt]);
+      <span class="keyword">return</span> ContentService.createTextOutput(<span class="string">'ok'</span>);
+    }
+
+    <span class="comment">// ── Fleet data sync → saves to FleetJSON sheet ───────────────────</span>
+    <span class="keyword">if</span>(p.chunks){
+      <span class="keyword">const</span> ss = SpreadsheetApp.openById(SHEET_ID);
+      <span class="keyword">let</span> sh = ss.getSheetByName(<span class="string">'FleetJSON'</span>);
+      <span class="keyword">if</span>(!sh) sh = ss.insertSheet(<span class="string">'FleetJSON'</span>);
+      sh.clearContents();
+      sh.getRange(1,1,p.chunks.length,1).setValues(p.chunks.map(c => [c]));
+    }
+    <span class="keyword">return</span> ContentService.createTextOutput(<span class="string">'ok'</span>);
+
+  }<span class="keyword">catch</span>(e){
+    <span class="keyword">return</span> ContentService.createTextOutput(JSON.stringify({error:e.message}));
+  }
+}</pre>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-title">Deploy as a Web App</div>
+  <p>After pasting the code, click the blue <strong>Deploy</strong> button in the top right, then choose <strong>New deployment</strong>.</p>
+  <ul>
+    <li>Type: select <strong>Web app</strong></li>
+    <li>Description: <em>Fleet Manager</em> (any name)</li>
+    <li>Execute as: <strong>Me</strong></li>
+    <li>Who has access: <strong>Anyone</strong> <span class="tag">important</span></li>
+  </ul>
+  <div class="tip"><strong>⚠️ Why "Anyone"?</strong> The tool needs to be able to send data from your browser without logging in each time. The URL itself acts as the password — anyone who has it can use it, so keep it private.</div>
+  <p>Click <strong>Deploy</strong>. Google will ask you to authorize the app — click <strong>Review permissions</strong>, choose your Google account, and click <strong>Allow</strong>.</p>
+  <div class="highlight">
+    After deploying, you'll see a <strong>Web app URL</strong> that looks like:<br><br>
+    <strong>https://script.google.com/macros/s/AKfycb.../exec</strong><br><br>
+    Copy this URL — this is what you paste into the Fleet Manager tools.
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-title">Paste the URL into the Fleet Manager</div>
+  <p><strong>On the desktop tool:</strong> The URL field is in the left sidebar under <em>☁️ Google Sheets Sync</em>. Paste it there and click <strong>⬆ Save</strong> to push your fleet data up for the first time.</p>
+  <p><strong>On the mobile app:</strong> Go to <strong>⚙️ Settings</strong> tab → <em>☁️ Google Sheets Sync</em> section → paste the same URL. Then tap <strong>⬇ Load</strong> to get the vehicle list from the office.</p>
+  <div class="tip"><strong>💡 Tip:</strong> Use the same URL for both tools — the same script handles everything (sync, photos, checklists).</div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-title">What gets saved where</div>
+  <p>Once connected, here's what goes where automatically:</p>
+  <ul>
+    <li>🚛 <strong>Vehicle list, mileage logs, maintenance records</strong> → <em>FleetJSON</em> sheet (compressed data)</li>
+    <li>☑️ <strong>Morning checklists</strong> → <em>Checklists</em> sheet (one row per submission, readable)</li>
+    <li>📷 <strong>Inspection & damage photos</strong> → a <em>Fleet Photos</em> folder in your Google Drive, with a shareable link saved in the checklist/damage record</li>
+  </ul>
+  <div class="highlight">
+    📁 The <strong>Fleet Photos</strong> folder is created automatically the first time a photo is uploaded. You can find it in <a href="https://drive.google.com" target="_blank">drive.google.com</a>.
+  </div>
+</div>
+
+<!-- STEP 6 - Redeployment note -->
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-title">If you make changes to the script later</div>
+  <p>If you ever need to update the Apps Script code, you must redeploy:</p>
+  <ul>
+    <li>Click <strong>Deploy → Manage deployments</strong></li>
+    <li>Click the pencil ✏️ edit icon on your deployment</li>
+    <li>Change version to <strong>New version</strong></li>
+    <li>Click <strong>Deploy</strong></li>
+  </ul>
+  <p>The URL stays the same — you don't need to update it in the tools.</p>
+</div>
+
+<hr class="divider">
+
+<div class="done">✅ That's it — your fleet is connected to Google. Photos go to Drive, checklists log to Sheets, and all data syncs across office and drivers.</div>
+
+<script>
+function copyCode(){
+  const code = document.getElementById('apps-script-code').innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(()=>btn.textContent='Copy', 2000);
+  });
+}
+</script>
+</body>
+</html>

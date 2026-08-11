@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Fleet Driver App</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f0f4f8;--card:#fff;--navy:#1e3a5f;--blue:#0ea5e9;
+  --amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#a855f7;
+  --text:#1e3a5f;--text2:#475569;--text3:#94a3b8;
+  --border:rgba(0,0,0,.09);--font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono','Courier New',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+/* Header */
+.header{background:var(--navy);padding:16px 18px 14px;position:sticky;top:0;z-index:100}
+.header-title{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.header-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+/* Nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid rgba(255,255,255,.1);display:flex;z-index:200;height:66px}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;font-family:var(--font);color:rgba(255,255,255,.45);font-size:10px;font-weight:600;padding:8px 4px;transition:color .15s}
+.nav-btn.active{color:#fff}
+.nav-btn .ni{font-size:18px;line-height:1}
+/* Screens */
+.screen{display:none;padding:14px 16px}
+.screen.active{display:block}
+/* Cards */
+.card{background:var(--card);border-radius:14px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+.card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:700;color:var(--text)}
+.card-body{padding:14px 16px}
+/* Vehicle selector */
+.vehicle-picker{display:grid;gap:10px}
+.vpick{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all .15s}
+.vpick:active{transform:scale(.98)}
+.vpick.selected{border-color:var(--blue);background:rgba(14,165,233,.05)}
+.vpick-plate{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--navy);background:#f0f4f8;padding:4px 12px;border-radius:6px;letter-spacing:2px}
+.vpick-info{flex:1}
+.vpick-name{font-size:13px;font-weight:600;color:var(--text)}
+.vpick-driver{font-size:11px;color:var(--text3)}
+.vpick-status{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* Status colors */
+.dot-ok{background:var(--green)}
+.dot-warn{background:var(--amber)}
+.dot-danger{background:var(--red);animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 5px rgba(239,68,68,0)}}
+/* Upload area */
+.upload-area{border:2px dashed var(--border);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .15s;position:relative;background:#fafcff}
+.upload-area:active{background:rgba(14,165,233,.05);border-color:var(--blue)}
+.upload-icon{font-size:36px;margin-bottom:10px}
+.upload-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--text3)}
+.upload-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+/* Preview */
+.photo-preview{width:100%;border-radius:10px;max-height:200px;object-fit:contain;background:#f0f4f8}
+/* Form */
+.f-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+.f-input{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:15px;color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s;margin-bottom:12px}
+.f-input:focus{border-color:var(--blue)}
+.f-input.mono{font-family:var(--mono);font-size:22px;font-weight:700;text-align:center}
+/* Buttons */
+.btn-full{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font);border:none;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:active{background:#38bdf8;transform:scale(.98)}
+.btn-red{background:rgba(239,68,68,.1);color:var(--red);border:2px solid rgba(239,68,68,.3)}
+.btn-red:active{background:rgba(239,68,68,.2)}
+.btn-ghost{background:#f0f4f8;color:var(--text2);border:1.5px solid var(--border)}
+/* AI result */
+.ai-result{background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(168,85,247,.08));border:1.5px solid rgba(14,165,233,.3);border-radius:12px;padding:16px;margin-bottom:14px}
+.ai-result-label{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;margin-bottom:6px}
+.ai-result-value{font-size:32px;font-weight:800;font-family:var(--mono);color:var(--navy)}
+.ai-result-sub{font-size:11px;color:var(--text3);margin-top:3px}
+/* Status badge */
+.badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px}
+.badge-ok{background:rgba(34,197,94,.12);color:var(--green)}
+.badge-warn{background:rgba(245,158,11,.12);color:var(--amber)}
+.badge-danger{background:rgba(239,68,68,.12);color:var(--red)}
+/* Info rows */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:11px;color:var(--text3)}
+.info-val{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono)}
+/* Damage report */
+.damage-submitted{background:rgba(239,68,68,.08);border:2px solid rgba(239,68,68,.25);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px}
+.damage-submitted .icon{font-size:32px;margin-bottom:8px}
+.damage-submitted .title{font-size:14px;font-weight:700;color:var(--red);margin-bottom:4px}
+.damage-submitted .sub{font-size:11px;color:var(--text3)}
+/* Loading */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:12px}
+.spinner{width:36px;height:36px;border:3px solid rgba(14,165,233,.2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.loading-text{font-size:13px;color:var(--text2);text-align:center}
+/* Sync status */
+.sync-status{font-size:11px;text-align:center;padding:8px;color:var(--text3)}
+</style>
+
+  <!-- PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fleet Driver">
+  <meta name="application-name" content="Fleet Driver">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="description" content="Driver app for fleet management — mileage, checklists, damage reports">
+  <link id="pwa-manifest" rel="manifest">
+  <!-- Apple touch icon (SVG inline as data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e3a5f'/%3E%3Ctext x='256' y='330' font-size='280' text-anchor='middle' fill='white'%3E🚛%3C/text%3E%3C/svg%3E">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <!-- Build: 2026-08-10 23:11 -->
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="scr-login" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:32px">
+  <div style="text-align:center;margin-bottom:36px">
+    <div style="font-size:48px;margin-bottom:12px">🚛</div>
+    <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-.5px">Fleet Driver</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px" id="login-sub">Enter your PIN to continue</div>
+  </div>
+  <!-- Driver selector -->
+  <div id="login-driver-step" style="width:100%;max-width:320px">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;text-align:center">Select your name</div>
+    <div id="login-driver-list" style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto"></div>
+    <div style="margin-top:16px;text-align:center">
+      <div style="font-size:11px;color:rgba(255,255,255,.3)">Not listed? Ask your office to add you.</div>
+    </div>
+  </div>
+  <!-- PIN entry -->
+  <div id="login-pin-step" style="display:none;width:100%;max-width:300px">
+    <div style="font-size:13px;color:rgba(255,255,255,.7);text-align:center;margin-bottom:16px" id="login-driver-greeting">Hello!</div>
+    <!-- PIN dots -->
+    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:28px" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <!-- PIN error -->
+    <div id="pin-error" style="display:none;text-align:center;color:#ef4444;font-size:13px;font-weight:600;margin-bottom:12px">Incorrect PIN. Try again.</div>
+    <!-- Numpad -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto;width:100%">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key" onclick="loginBack()" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);font-size:12px">‹ Back</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key" onclick="pinDelete()" style="font-size:20px">⌫</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.3);background:transparent;transition:all .15s}
+.pin-dot.filled{background:#0ea5e9;border-color:#0ea5e9}
+.pin-key{padding:18px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:22px;font-weight:700;cursor:pointer;font-family:var(--mono);transition:all .1s;-webkit-tap-highlight-color:transparent}
+.pin-key:active{background:rgba(255,255,255,.25);transform:scale(.94)}
+.driver-btn{width:100%;padding:14px 18px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);text-align:left;display:flex;align-items:center;gap:12px;transition:all .15s}
+.driver-btn:active{background:rgba(255,255,255,.18);transform:scale(.98)}
+</style>
+
+<!-- ADMIN PIN OVERLAY -->
+<div id="admin-pin-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,25,40,.92);z-index:900;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px">
+  <div style="background:#1a2d42;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;width:100%;max-width:300px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Admin Access</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:24px">Enter admin PIN to open settings</div>
+    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:20px" id="admin-pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div id="admin-pin-error" style="display:none;color:#ef4444;font-size:12px;font-weight:600;margin-bottom:12px">Incorrect PIN</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto">
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('1')">1</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('2')">2</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('3')">3</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('4')">4</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('5')">5</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('6')">6</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('7')">7</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('8')">8</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('9')">9</button>
+      <button class="pin-key" style="padding:14px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:11px" onclick="closeAdminPin()">Cancel</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('0')">0</button>
+      <button class="pin-key" style="padding:14px;font-size:18px" onclick="adminPinDelete()">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div class="header-title">🚛 Fleet Driver <span style="font-size:10px;opacity:.4;font-weight:400">v4</span></div>
+      <div class="header-sub" id="h-sub">Select your vehicle to start</div>
+    </div>
+    <button onclick="driverSync()" id="sync-btn" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.4);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">☁️ Sync</button>
+  </div>
+  <div id="driver-sync-msg" style="font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:3px;min-height:13px"></div>
+</div>
+
+<!-- SCREEN: Vehicle Select -->
+<div class="screen active" id="scr-select">
+  <div style="margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Your Vehicle</div>
+    <div style="font-size:11px;color:var(--text3)">Tap to select the vehicle you're driving today</div>
+  </div>
+  <div class="vehicle-picker" id="vehicle-picker">
+    <div style="text-align:center;padding:40px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:10px">🚛</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">No vehicles set up</div>
+      <div style="font-size:11px;line-height:1.6">Vehicles are added from the office dashboard. Make sure the office has set up the fleet first.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: Mileage -->
+<div class="screen" id="scr-mileage">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📸 Odometer Photo</div>
+      <span style="font-size:11px;color:var(--text3)">AI reads the mileage</span>
+    </div>
+    <div class="card-body">
+      <div id="mileage-upload-area">
+        <div class="upload-area" id="mile-upload-zone">
+          <input type="file" accept="image/*" capture="environment" class="upload-input" onchange="handleMileagePhoto(this)">
+          <div class="upload-icon">📷</div>
+          <div class="upload-title">Take odometer photo</div>
+          <div class="upload-sub">Or tap to choose from gallery</div>
+        </div>
+      </div>
+      <div id="mileage-loading" style="display:none" class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Reading odometer with AI…<br>This takes a few seconds</div>
+      </div>
+      <div id="mileage-result" style="display:none">
+        <img id="mile-preview" class="photo-preview" style="margin-bottom:12px" src="" alt="odometer">
+        <div class="ai-result" id="mile-ai-box">
+          <div class="ai-result-label">📍 AI Read Mileage</div>
+          <div class="ai-result-value" id="mile-ai-val">—</div>
+          <div class="ai-result-sub" id="mile-ai-sub">Confirm or correct below</div>
+        </div>
+        <label class="f-label">Confirm Mileage (mi)</label>
+        <input class="f-input mono" id="mile-confirm" type="number" placeholder="0">
+        <label class="f-label">Notes (optional)</label>
+        <input class="f-input" id="mile-notes" placeholder="Route, observations...">
+        <button class="btn-full btn-blue" onclick="submitMileage()" style="margin-top:4px">✓ Submit Reading</button>
+        <button class="btn-full btn-ghost" onclick="resetMileage()" style="margin-top:10px">↩ Retake Photo</button>
+      </div>
+    </div>
+  </div>
+  <!-- Recent readings -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Recent Readings</div></div>
+    <div class="card-body" id="mile-history" style="padding:0"></div>
+  </div>
+</div>
+
+<!-- SCREEN: Damage Report -->
+<div class="screen" id="scr-damage">
+  <div id="damage-submitted-banner" style="display:none" class="damage-submitted">
+    <div class="icon">✅</div>
+    <div class="title">Damage Report Sent</div>
+    <div class="sub">The office has been notified. They will follow up with you.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">🚨 Report Damage</div>
+      <span style="font-size:11px;color:var(--red);font-weight:600">Urgent</span>
+    </div>
+    <div class="card-body">
+      <div id="dmg-upload-area">
+        <div class="upload-area" id="dmg-upload-zone">
+          <input type="file" accept="image/*" capture="environment" class="upload-input" onchange="handleDamagePhoto(this)">
+          <div class="upload-icon">📷</div>
+          <div class="upload-title">Photo of damage</div>
+          <div class="upload-sub">Take a clear photo showing the damage</div>
+        </div>
+      </div>
+      <img id="dmg-preview" class="photo-preview" style="display:none;margin-bottom:12px" src="" alt="damage">
+      <button id="dmg-retake-btn" style="display:none;width:100%;margin-bottom:12px;padding:8px;border-radius:8px;background:#f0f4f8;border:1px solid var(--border);font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font)" onclick="resetDamagePhoto()">↩ Retake Photo</button>
+
+      <label class="f-label">Your Name</label>
+      <input class="f-input" id="dmg-driver" placeholder="Your name">
+
+      <label class="f-label">What happened?</label>
+      <textarea class="f-input" id="dmg-desc" rows="3" style="resize:none;height:80px;font-size:14px" placeholder="Describe the damage — where, how it happened..."></textarea>
+
+      <label class="f-label">Location / Address</label>
+      <input class="f-input" id="dmg-location" placeholder="Where did this happen?">
+
+      <button class="btn-full btn-red" onclick="submitDamage()" style="margin-top:4px">🚨 Submit Damage Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: My Vehicle -->
+<div class="screen" id="scr-vehicle">
+  <div id="my-vehicle-body"></div>
+</div>
+
+<!-- SCREEN: Settings -->
+<div class="screen" id="scr-settings">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">⚙️ Admin Settings</div>
+      <span style="font-size:10px;background:rgba(239,68,68,.12);color:#ef4444;padding:2px 8px;border-radius:6px;font-weight:700">🔐 Admin</span>
+    </div>
+    <div class="card-body">
+      <label class="f-label">Admin PIN</label>
+      <input class="f-input" id="s-admin-pin" type="number" placeholder="Enter new admin PIN (4+ digits)" style="font-family:var(--mono);letter-spacing:4px">
+      <div style="font-size:10px;color:var(--text3);margin-top:-6px;margin-bottom:14px">Default PIN is <strong>0000</strong>. Change this to something private.</div>
+      <label class="f-label">Claude API Key (AI odometer reading)</label>
+      <input class="f-input" id="s-api-key" type="password" placeholder="sk-ant-...">
+      <div style="font-size:10px;color:var(--text3);margin-top:-6px;margin-bottom:0;line-height:1.5">Without an API key you can still enter mileage manually after uploading a photo.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">☁️ Google Sheets Sync</div></div>
+    <div class="card-body">
+      <label class="f-label">Apps Script URL</label>
+      <input class="f-input" id="s-sync-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button class="btn-full btn-ghost" style="padding:12px;font-size:13px;font-weight:700" onclick="adminSyncLoad()">⬇ Load from Sheets</button>
+        <button class="btn-full btn-blue" style="padding:12px;font-size:13px" onclick="adminSyncSave()">⬆ Save to Sheets</button>
+      </div>
+      <div id="m-sync-status" style="font-size:11px;color:var(--text3);text-align:center;min-height:16px;padding:4px"></div>
+    </div>
+  </div>
+  <button class="btn-full btn-blue" onclick="saveAdminSettings()" style="padding:14px;font-size:15px;margin-bottom:14px">💾 Save Settings</button>
+  <div class="card">
+    <div class="card-header"><div class="card-title">👤 Session</div></div>
+    <div class="card-body">
+      <div id="session-info" style="font-size:13px;color:var(--text);margin-bottom:14px"></div>
+      <button class="btn-full btn-ghost" onclick="logOut()" style="padding:11px">🚪 Log Out</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">📋 About</div></div>
+    <div class="card-body">
+      <div class="info-row"><span class="info-label">Version</span><span class="info-val">1.0</span></div>
+      <div class="info-row"><span class="info-label">Selected Vehicle</span><span class="info-val" id="s-sel-vehicle">None</span></div>
+      <div class="info-row"><span class="info-label">Logs stored</span><span class="info-val" id="s-log-count">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<!-- SCREEN: Morning Checklist -->
+<div class="screen" id="scr-checklist">
+  <div id="cl-intro" style="margin-bottom:14px">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🌅 Morning Inspection</div>
+    <div style="font-size:11px;color:var(--text3)" id="cl-date"></div>
+  </div>
+  <div id="cl-already-done" style="display:none;background:rgba(34,197,94,.08);border:2px solid rgba(34,197,94,.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px">
+    <div style="font-size:32px;margin-bottom:8px">✅</div>
+    <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">Checklist Complete</div>
+    <div style="font-size:11px;color:var(--text3)">You already completed today's inspection.</div>
+    <button class="btn-full btn-ghost" onclick="resetChecklist()" style="margin-top:14px;padding:10px">Redo Inspection</button>
+  </div>
+  <div id="cl-form">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header" style="background:linear-gradient(135deg,rgba(14,165,233,.08),rgba(168,85,247,.06))">
+        <div class="card-title">🚛 Pre-Trip Inspection</div>
+        <div style="font-size:10px;color:var(--text3)" id="cl-progress">0 / 0</div>
+      </div>
+      <div class="card-body" style="padding:0" id="cl-items"></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">📷 Inspection Photo</div></div>
+      <div class="card-body">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Take a photo of the vehicle before departure — uploaded to Google Drive automatically.</div>
+        <div class="upload-area" id="cl-upload-zone" style="padding:18px">
+          <input type="file" accept="image/*" capture="environment" class="upload-input" onchange="handleChecklistPhoto(this)">
+          <div class="upload-icon" style="font-size:28px">📷</div>
+          <div class="upload-title" style="font-size:13px">Take inspection photo</div>
+          <div class="upload-sub">Uploaded to Drive automatically</div>
+        </div>
+        <img id="cl-photo-preview" class="photo-preview" style="display:none;margin-top:10px" src="" alt="inspection">
+        <div id="cl-photo-status" style="font-size:11px;text-align:center;margin-top:8px;color:var(--text3)"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-header"><div class="card-title">📝 Notes</div></div>
+      <div class="card-body">
+        <textarea class="f-input" id="cl-notes" rows="3" style="resize:none;height:70px;font-size:13px;margin-bottom:0" placeholder="Anything to note before departure..."></textarea>
+      </div>
+    </div>
+    <button class="btn-full btn-blue" id="cl-submit-btn" onclick="submitChecklist()" style="padding:15px;font-size:15px">
+      ✓ Submit Inspection
+    </button>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb-select" onclick="goScreen('scr-select','nb-select')">
+    <span class="ni">🚛</span>Vehicle
+  </button>
+  <button class="nav-btn" id="nb-mileage" onclick="goScreen('scr-mileage','nb-mileage')">
+    <span class="ni">🛣</span>Mileage
+  </button>
+  <button class="nav-btn" id="nb-damage" onclick="goScreen('scr-damage','nb-damage')">
+    <span class="ni">🚨</span>Damage
+  </button>
+  <button class="nav-btn" id="nb-vehicle" onclick="goScreen('scr-vehicle','nb-vehicle')">
+    <span class="ni">ℹ️</span>My Vehicle
+  </button>
+  <button class="nav-btn" id="nb-checklist" onclick="goScreen('scr-checklist','nb-checklist')">
+    <span class="ni">☑️</span>Checklist
+  </button>
+  <button class="nav-btn" id="nb-settings" onclick="requestAdminAccess()">
+    <span class="ni">⚙️</span>Settings
+  </button>
+</nav>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────
+const LS = {
+  vehicles:  'fleet_vehicles_v1',
+  mileage:   'fleet_mileage_v1',
+  maint:     'fleet_maint_v1',
+  damage:    'fleet_damage_v1',
+  pending:   'fleet_damage_pending',
+  settings:  'fleet_driver_settings',
+  selected:  'fleet_selected_vehicle',
+};
+
+let vehicles=[], mileageLogs=[], maintLogs=[], damageLogs=[];
+let selectedVehicleId = null;
+let settings = { driverName:'', apiKey:'' };
+let dmgPhotoBase64 = null;
+let dmgPhotoUrl = null;
+let milePhotoBase64 = null;
+
+function hydrate(){
+  try{
+    vehicles    = JSON.parse(localStorage.getItem(LS.vehicles)||'[]');
+    mileageLogs = JSON.parse(localStorage.getItem(LS.mileage)||'[]');
+    maintLogs   = JSON.parse(localStorage.getItem(LS.maint)||'[]');
+    damageLogs  = JSON.parse(localStorage.getItem(LS.damage)||'[]');
+    settings    = JSON.parse(localStorage.getItem(LS.settings)||'{}');
+    selectedVehicleId = localStorage.getItem(LS.selected)||null;
+    if(settings.driverName){ document.getElementById('s-driver-name').value=settings.driverName; document.getElementById('dmg-driver').value=settings.driverName; }
+    if(settings.apiKey) document.getElementById('s-api-key').value=settings.apiKey;
+  }catch(e){}
+}
+function persist(){
+  try{
+    localStorage.setItem(LS.mileage,  JSON.stringify(mileageLogs));
+    localStorage.setItem(LS.damage,   JSON.stringify(damageLogs));
+  }catch(e){}
+}
+function saveSettings(){
+  settings.driverName = document.getElementById('s-driver-name').value.trim();
+  settings.apiKey     = document.getElementById('s-api-key').value.trim();
+  try{ localStorage.setItem(LS.settings, JSON.stringify(settings)); }catch(e){}
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────
+function goScreen(id, nb){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(nb).classList.add('active');
+  if(id==='scr-select') renderVehiclePicker();
+  if(id==='scr-mileage') renderMileHistory();
+  if(id==='scr-vehicle') renderMyVehicle();
+  if(id==='scr-settings') renderSettings();
+  if(id==='scr-checklist') renderChecklist();
+  window.scrollTo(0,0);
+}
+
+// ── Vehicle Picker ────────────────────────────────────────────────────────
+function renderVehiclePicker(){
+  if(!vehicles.length){
+    document.getElementById('vehicle-picker').innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:10px">🚛</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">No vehicles set up</div>
+        <div style="font-size:11px;line-height:1.6">Vehicles are added from the office dashboard.</div>
+      </div>`;
+    return;
+  }
+  document.getElementById('vehicle-picker').innerHTML = vehicles.map(v=>{
+    const status = getVehicleStatus(v);
+    const dotCls = status==='ok'?'dot-ok':status==='warn'?'dot-warn':'dot-danger';
+    const latest = getLatestMileage(v.id);
+    const curMiles = latest ? latest.miles : (v.currentMiles||0);
+    const sel = v.id === selectedVehicleId;
+    return `<div class="vpick ${sel?'selected':''}" onclick="selectVehicle('${v.id}')">
+      <div class="vpick-plate">${v.plate}</div>
+      <div class="vpick-info">
+        <div class="vpick-name">${v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')||'Vehicle'}</div>
+        <div class="vpick-driver">${v.driver||'No driver assigned'} · ${curMiles?Number(curMiles).toLocaleString()+' mi':'No readings'}</div>
+      </div>
+      <div class="vpick-status ${dotCls}"></div>
+    </div>`;
+  }).join('');
+}
+
+function selectVehicle(id){
+  selectedVehicleId = id;
+  try{ localStorage.setItem(LS.selected, id); }catch(e){}
+  renderVehiclePicker();
+  const v = vehicles.find(x=>x.id===id);
+  document.getElementById('h-sub').textContent = v ? v.plate+((v.name||(v.make?(v.make+' '+(v.model||'')).trim():''))?' · '+(v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')):'') : '';
+  // Pre-fill driver name
+  if(settings.driverName) document.getElementById('dmg-driver').value = settings.driverName;
+  // Check if already logged in this session
+  try{
+    const sess = JSON.parse(sessionStorage.getItem('fleet_logged_in')||'null');
+    if(sess){
+      loggedInDriver = sess;
+      settings.driverName = sess.name;
+      document.getElementById('dmg-driver').value = sess.name;
+      document.getElementById('h-sub').textContent = sess.name+(sess.vehicleId?' · '+(vehicles.find(v=>v.id===sess.vehicleId)?.plate||''):'');
+      if(sess.vehicleId){ selectedVehicleId=sess.vehicleId; }
+    } else {
+      // Show login screen
+      setTimeout(showLoginScreen, 200);
+    }
+  }catch(e){ setTimeout(showLoginScreen, 200); }
+  // Morning checklist auto-popup
+  setTimeout(()=>{
+    const todayKey = new Date().toISOString().slice(0,10);
+    const done = JSON.parse(localStorage.getItem('fleet_cl_done_'+todayKey)||'null');
+    if(!done || done._reset){
+      // Auto-open checklist in the morning (before noon)
+      const hour = new Date().getHours();
+      if(hour < 12){
+        goScreen('scr-checklist','nb-checklist');
+      }
+    }
+  }, 800);
+  // Restore sync URL
+  try{
+    const savedUrl = localStorage.getItem('fleet_sync_url')||'';
+    const urlEl = document.getElementById('s-sync-url');
+    if(urlEl && savedUrl) urlEl.value = savedUrl;
+    // Also fill login screen URL and hide if already set
+    const loginUrlEl = document.getElementById('login-sync-url');
+    if(loginUrlEl && savedUrl){ loginUrlEl.value = savedUrl; }
+    const firstTime = document.getElementById('first-time-sync');
+    if(firstTime && savedUrl) firstTime.style.display='none';
+  }catch(e){}
+}
+
+// ── Mileage ───────────────────────────────────────────────────────────────
+async function handleMileagePhoto(input){
+  if(!input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = async e => {
+    milePhotoBase64 = e.target.result.split(',')[1];
+    document.getElementById('mile-preview').src = e.target.result;
+    document.getElementById('mileage-upload-area').style.display='none';
+    document.getElementById('mileage-loading').style.display='flex';
+    document.getElementById('mileage-result').style.display='none';
+    // Try AI reading
+    const miles = await readOdometerWithAI(e.target.result.split(',')[1]);
+    document.getElementById('mileage-loading').style.display='none';
+    document.getElementById('mileage-result').style.display='block';
+    if(miles){
+      document.getElementById('mile-ai-val').textContent = Number(miles).toLocaleString()+' mi';
+      document.getElementById('mile-ai-sub').textContent = 'AI read this value — confirm or correct';
+      document.getElementById('mile-confirm').value = miles;
+    } else {
+      document.getElementById('mile-ai-val').textContent = 'Not detected';
+      document.getElementById('mile-ai-sub').textContent = 'Enter the mileage manually below';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function readOdometerWithAI(base64){
+  const apiKey = settings.apiKey;
+  if(!apiKey) return null;
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:100,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+            {type:'text',text:'Read the odometer or mileage display in this photo. Reply with ONLY the number (digits only, no units, no text). If you cannot read it clearly, reply with "0".'}
+          ]
+        }]
+      })
+    });
+    const data = await res.json();
+    const txt = data?.content?.[0]?.text?.trim()||'';
+    const num = parseInt(txt.replace(/\D/g,''));
+    return isNaN(num)||num===0 ? null : num;
+  }catch(e){ return null; }
+}
+
+function resetMileage(){
+  milePhotoBase64 = null;
+  document.getElementById('mileage-upload-area').style.display='';
+  document.getElementById('mileage-result').style.display='none';
+  document.getElementById('mile-confirm').value='';
+}
+
+function submitMileage(){
+  if(!selectedVehicleId){ alert('Select a vehicle first.'); goScreen('scr-select','nb-select'); return; }
+  const miles = parseFloat(document.getElementById('mile-confirm').value);
+  if(!miles){ alert('Enter or confirm the mileage reading.'); return; }
+  const notes = document.getElementById('mile-notes').value;
+  const entry = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2),
+    vehicleId: selectedVehicleId,
+    miles, date: new Date().toISOString().slice(0,10),
+    driver: settings.driverName||'Driver',
+    notes, source:'photo',
+    photo: milePhotoBase64 ? 'data:image/jpeg;base64,'+milePhotoBase64 : null,
+    addedAt: new Date().toISOString(),
+  };
+  mileageLogs.push(entry);
+  // Update vehicle current mileage
+  const v = vehicles.find(x=>x.id===selectedVehicleId);
+  if(v && miles > (v.currentMiles||0)){ v.currentMiles=miles; try{ localStorage.setItem(LS.vehicles, JSON.stringify(vehicles)); }catch(e){} }
+  persist();
+  resetMileage();
+  document.getElementById('mile-notes').value='';
+  renderMileHistory();
+  alert('✓ Mileage logged: '+Number(miles).toLocaleString()+' mi');
+}
+
+function renderMileHistory(){
+  const vid = selectedVehicleId;
+  const logs = mileageLogs.filter(l=>!vid||l.vehicleId===vid).sort((a,b)=>new Date(b.addedAt)-new Date(a.addedAt)).slice(0,8);
+  if(!logs.length){ document.getElementById('mile-history').innerHTML='<div style="padding:14px;font-size:12px;color:var(--text3);text-align:center">No readings yet</div>'; return; }
+  document.getElementById('mile-history').innerHTML = logs.map(l=>{
+    const v = vehicles.find(x=>x.id===l.vehicleId);
+    return `<div class="info-row" style="padding:10px 16px">
+      <div>
+        <div style="font-size:12px;font-weight:700;font-family:var(--mono)">${Number(l.miles).toLocaleString()} mi</div>
+        <div style="font-size:10px;color:var(--text3)">${v?v.plate:''} · ${l.date}</div>
+      </div>
+      ${l.photo?`<img src="${l.photo}" style="width:44px;height:34px;border-radius:6px;object-fit:cover" onclick="showPhoto('${l.photo}')">`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── Damage Report ─────────────────────────────────────────────────────────
+function handleDamagePhoto(input){
+  if(!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    dmgPhotoBase64 = e.target.result.split(',')[1];
+    document.getElementById('dmg-preview').src = e.target.result;
+    document.getElementById('dmg-preview').style.display='block';
+    document.getElementById('dmg-retake-btn').style.display='block';
+    document.getElementById('dmg-upload-zone').style.display='none';
+    // Upload damage photo to Drive
+    const driveUrl = await uploadPhotoToDrive(dmgPhotoBase64, 'damage');
+    if(driveUrl){ dmgPhotoUrl = driveUrl; console.log('Damage photo on Drive:', driveUrl); }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function resetDamagePhoto(){
+  dmgPhotoBase64 = null;
+  document.getElementById('dmg-preview').style.display='none';
+  document.getElementById('dmg-retake-btn').style.display='none';
+  document.getElementById('dmg-upload-zone').style.display='';
+}
+
+function submitDamage(){
+  if(!selectedVehicleId){ alert('Select your vehicle first.'); goScreen('scr-select','nb-select'); return; }
+  const desc     = document.getElementById('dmg-desc').value.trim();
+  const driver   = document.getElementById('dmg-driver').value.trim();
+  const location = document.getElementById('dmg-location').value.trim();
+  if(!desc){ alert('Describe the damage.'); return; }
+  const report = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2),
+    vehicleId: selectedVehicleId,
+    driver: driver||settings.driverName||'Driver',
+    description: desc,
+    location,
+    photo: dmgPhotoBase64 ? 'data:image/jpeg;base64,'+dmgPhotoBase64 : null,
+    photoUrl: dmgPhotoUrl||null,
+    status: 'open',
+    seen: false,
+    reportedAt: new Date().toISOString(),
+  };
+  // Save to damage logs
+  damageLogs.push(report);
+  persist();
+  // Also push to pending queue for office to pick up
+  try{
+    const pending = JSON.parse(localStorage.getItem(LS.pending)||'[]');
+    pending.push(report);
+    localStorage.setItem(LS.pending, JSON.stringify(pending));
+  }catch(e){}
+  // Show success
+  document.getElementById('damage-submitted-banner').style.display='block';
+  // Reset form
+  resetDamagePhoto();
+  document.getElementById('dmg-desc').value='';
+  document.getElementById('dmg-location').value='';
+  setTimeout(()=>{ document.getElementById('damage-submitted-banner').style.display='none'; },8000);
+}
+
+// ── My Vehicle ────────────────────────────────────────────────────────────
+function renderMyVehicle(){
+  if(!selectedVehicleId){
+    document.getElementById('my-vehicle-body').innerHTML=`<div style="text-align:center;padding:48px 24px;color:var(--text3)"><div style="font-size:40px;margin-bottom:12px">🚛</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">No vehicle selected</div><div style="font-size:11px">Go to the Vehicle tab and tap your truck.</div></div>`;
+    return;
+  }
+  const v = vehicles.find(x=>x.id===selectedVehicleId);
+  if(!v){ document.getElementById('my-vehicle-body').innerHTML='<div style="padding:24px;color:var(--text3);text-align:center">Vehicle not found.</div>'; return; }
+  const status = getVehicleStatus(v);
+  const statusBadge = status==='ok'?'badge-ok':status==='warn'?'badge-warn':'badge-danger';
+  const statusTxt   = status==='ok'?'All Clear':status==='warn'?'Needs Attention':'Action Required';
+  const latest = getLatestMileage(v.id);
+  const curMiles = latest ? latest.miles : (v.currentMiles||0);
+  const lastOil = maintLogs.filter(m=>m.vehicleId===v.id&&m.type==='Oil Change').sort((a,b)=>b.miles-a.miles)[0];
+  const inspDays = daysFrom(v.inspectionDue);
+  const insDays  = daysFrom(v.insuranceExpires);
+  document.getElementById('my-vehicle-body').innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div style="font-family:var(--mono);font-size:20px;font-weight:800;letter-spacing:2px">${v.plate}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${v.name||''} ${v.make?'· '+v.make+' '+(v.model||''):''}</div>
+        </div>
+        <span class="badge ${statusBadge}">${statusTxt}</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="info-row" style="padding:12px 16px"><span class="info-label">Current Mileage</span><span class="info-val">${Number(curMiles).toLocaleString()} mi</span></div>
+        <div class="info-row" style="padding:12px 16px"><span class="info-label">Assigned Driver</span><span class="info-val" style="font-family:var(--font)">${v.driver||'—'}</span></div>
+        <div class="info-row" style="padding:12px 16px">
+          <span class="info-label">Annual Inspection</span>
+          <span class="info-val" style="color:${inspDays===null?'var(--text)':inspDays<0?'var(--red)':inspDays<=30?'var(--amber)':'var(--green)'}">${inspDays===null?'—':inspDays<0?'OVERDUE '+Math.abs(inspDays)+'d':inspDays<=30?v.inspectionDue+' ('+inspDays+'d)':v.inspectionDue}</span>
+        </div>
+        <div class="info-row" style="padding:12px 16px">
+          <span class="info-label">Insurance</span>
+          <span class="info-val" style="color:${insDays===null?'var(--text)':insDays<0?'var(--red)':insDays<=30?'var(--amber)':'var(--green)'}">${insDays===null?'—':insDays<0?'EXPIRED':insDays<=30?v.insuranceExpires+' ('+insDays+'d)':v.insuranceExpires}</span>
+        </div>
+        ${lastOil?`<div class="info-row" style="padding:12px 16px"><span class="info-label">Last Oil Change</span><span class="info-val">${lastOil.date} · ${Number(lastOil.miles).toLocaleString()} mi</span></div>`:''}
+      </div>
+    </div>
+    ${status==='danger'?`<div style="background:rgba(239,68,68,.1);border:2px solid rgba(239,68,68,.3);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px">⚠️ Attention Required</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.6">This vehicle has an open issue. Check with the office before driving.</div>
+    </div>`:''}
+    <button class="btn-full btn-red" onclick="goScreen('scr-damage','nb-damage')" style="margin-bottom:10px">🚨 Report Damage</button>
+    <button class="btn-full btn-blue" onclick="goScreen('scr-mileage','nb-mileage')">📍 Log Mileage</button>`;
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────
+function renderSettings(){
+  const v = selectedVehicleId ? vehicles.find(x=>x.id===selectedVehicleId) : null;
+  document.getElementById('s-sel-vehicle').textContent = v ? v.plate : 'None';
+  document.getElementById('s-log-count').textContent   = mileageLogs.length + ' mileage, ' + damageLogs.length + ' damage';
+  const si = document.getElementById('session-info');
+  if(si && loggedInDriver){
+    si.innerHTML = '<strong>'+loggedInDriver.name+'</strong><span style="font-size:11px;color:var(--text3)"> · '+( loggedInDriver.role||'driver')+'</span>';
+  } else if(si){
+    si.textContent = 'Not logged in';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function getVehicle(id){ return vehicles.find(v=>v.id===id); }
+function getLatestMileage(vid){ return mileageLogs.filter(l=>l.vehicleId===vid).sort((a,b)=>b.miles-a.miles)[0]||null; }
+function daysFrom(d){ if(!d) return null; return Math.ceil((new Date(d+'T12:00:00')-new Date())/86400000); }
+function getVehicleStatus(v){
+  const latest = getLatestMileage(v.id);
+  const curMiles = latest ? latest.miles : (v.currentMiles||0);
+  const openDmg = damageLogs.filter(d=>d.vehicleId===v.id&&d.status==='open').length>0;
+  if(openDmg) return 'danger';
+  if(v.inspectionDue){ const d=daysFrom(v.inspectionDue); if(d!==null&&d<0) return 'danger'; if(d!==null&&d<=30) return 'warn'; }
+  const lastOil = maintLogs.filter(m=>m.vehicleId===v.id&&m.type==='Oil Change').sort((a,b)=>b.miles-a.miles)[0];
+  if(lastOil&&v.oilInterval){ const pct=(curMiles-lastOil.miles)/v.oilInterval; if(pct>=1) return 'danger'; if(pct>=0.8) return 'warn'; }
+  return 'ok';
+}
+function showPhoto(src){ const w=window.open(); w.document.write('<img src="'+src+'" style="max-width:100%;max-height:100vh">'); }
+
+// ── Checklist ─────────────────────────────────────────────────────────────
+const CHECKLIST_ITEMS = [
+  {id:'lights',      label:'Lights & signals working',        icon:'💡'},
+  {id:'mirrors',     label:'Mirrors clean and adjusted',       icon:'🪞'},
+  {id:'tires',       label:'Tires inflated, no visible damage',icon:'🛞'},
+  {id:'brakes',      label:'Brakes feel normal',               icon:'🛑'},
+  {id:'wipers',      label:'Wipers working',                   icon:'🌧'},
+  {id:'fuel',        label:'Fuel level checked',               icon:'⛽'},
+  {id:'fluids',      label:'Oil & coolant level OK',           icon:'🔧'},
+  {id:'exterior',    label:'No new exterior damage',           icon:'🚛'},
+  {id:'cargo_secure',label:'Cargo secured (if applicable)',    icon:'📦'},
+  {id:'documents',   label:'Registration & insurance in vehicle',icon:'📋'},
+];
+
+let clChecked = {};
+let clPhotoBase64 = null;
+let clPhotoUrl = null;
+
+function renderChecklist(){
+  const todayKey = new Date().toISOString().slice(0,10);
+  document.getElementById('cl-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  // Check if already done today
+  const done = JSON.parse(localStorage.getItem('fleet_cl_done_'+todayKey)||'null');
+  if(done && !done._reset){
+    document.getElementById('cl-already-done').style.display='block';
+    document.getElementById('cl-form').style.display='none';
+    return;
+  }
+  document.getElementById('cl-already-done').style.display='none';
+  document.getElementById('cl-form').style.display='block';
+  clChecked = {};
+  clPhotoBase64 = null;
+  clPhotoUrl = null;
+  renderChecklistItems();
+}
+
+function renderChecklistItems(){
+  const total = CHECKLIST_ITEMS.length;
+  const checked = Object.values(clChecked).filter(Boolean).length;
+  document.getElementById('cl-progress').textContent = checked+' / '+total;
+  document.getElementById('cl-submit-btn').style.opacity = checked===total ? '1':'0.5';
+  document.getElementById('cl-items').innerHTML = CHECKLIST_ITEMS.map(item=>{
+    const isChecked = !!clChecked[item.id];
+    return `<div onclick="toggleCheck('${item.id}')" style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:${isChecked?'rgba(34,197,94,.06)':'transparent'};transition:background .15s">
+      <div style="width:24px;height:24px;border-radius:6px;border:2px solid ${isChecked?'var(--green)':'var(--border)'};background:${isChecked?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">
+        ${isChecked?'<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="2,7 5.5,11 12,3" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
+      </div>
+      <span style="font-size:16px">${item.icon}</span>
+      <span style="font-size:13px;font-weight:${isChecked?'600':'400'};color:${isChecked?'var(--text)':'var(--text2)'}">${item.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleCheck(id){
+  clChecked[id] = !clChecked[id];
+  renderChecklistItems();
+}
+
+function handleChecklistPhoto(input){
+  if(!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    clPhotoBase64 = e.target.result.split(',')[1];
+    document.getElementById('cl-photo-preview').src = e.target.result;
+    document.getElementById('cl-photo-preview').style.display='block';
+    document.getElementById('cl-upload-zone').style.display='none';
+    document.getElementById('cl-photo-status').textContent='📤 Uploading to Google Drive...';
+    document.getElementById('cl-photo-status').style.color='var(--text3)';
+    // Upload to Drive via Apps Script
+    clPhotoUrl = await uploadPhotoToDrive(clPhotoBase64, 'inspection');
+    if(clPhotoUrl){
+      document.getElementById('cl-photo-status').innerHTML='✅ <a href="'+clPhotoUrl+'" target="_blank" style="color:var(--blue)">View on Google Drive</a>';
+    } else {
+      document.getElementById('cl-photo-status').textContent='⚠️ Saved locally (no sync URL set)';
+      document.getElementById('cl-photo-status').style.color='var(--amber)';
+    }
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function uploadPhotoToDrive(base64, type){
+  const url = localStorage.getItem('fleet_sync_url')||'';
+  if(!url) return null;
+  const v = selectedVehicleId ? vehicles.find(x=>x.id===selectedVehicleId) : null;
+  try{
+    const res = await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({
+        action:'uploadPhoto',
+        photo: base64,
+        filename: (v?v.plate:'vehicle')+'_'+type+'_'+new Date().toISOString().slice(0,19).replace(/:/g,'-')+'.jpg',
+        mimeType:'image/jpeg',
+      }),
+      redirect:'follow',
+    });
+    if(!res.ok) return null;
+    const data = await res.json();
+    return data.url||null;
+  }catch(e){ return null; }
+}
+
+async function submitChecklist(){
+  const total = CHECKLIST_ITEMS.length;
+  const checked = Object.values(clChecked).filter(Boolean).length;
+  if(checked < total){
+    if(!confirm('Not all items are checked ('+ checked +'/'+total+'). Submit anyway?')) return;
+  }
+  if(!selectedVehicleId){ alert('Select your vehicle first.'); goScreen('scr-select','nb-select'); return; }
+  const todayKey = new Date().toISOString().slice(0,10);
+  const v = vehicles.find(x=>x.id===selectedVehicleId);
+  const record = {
+    id: Date.now()+'_'+Math.random().toString(36).slice(2),
+    vehicleId: selectedVehicleId,
+    vehiclePlate: v?v.plate:'',
+    driver: settings.driverName||'Driver',
+    date: todayKey,
+    items: CHECKLIST_ITEMS.map(item=>({...item, checked:!!clChecked[item.id]})),
+    notes: document.getElementById('cl-notes').value.trim(),
+    photoUrl: clPhotoUrl||null,
+    allPassed: checked===total,
+    submittedAt: new Date().toISOString(),
+  };
+  // Save locally
+  const logs = JSON.parse(localStorage.getItem('fleet_cl_logs')||'[]');
+  logs.push(record);
+  try{ localStorage.setItem('fleet_cl_logs', JSON.stringify(logs)); }catch(e){}
+  // Mark today as done
+  try{ localStorage.setItem('fleet_cl_done_'+todayKey, JSON.stringify(record)); }catch(e){}
+  // Push to sync queue
+  try{
+    const queue = JSON.parse(localStorage.getItem('fleet_cl_queue')||'[]');
+    queue.push(record);
+    localStorage.setItem('fleet_cl_queue', JSON.stringify(queue));
+  }catch(e){}
+  // Auto-sync checklist to Sheets + push to desktop queue
+  const syncUrl = localStorage.getItem('fleet_sync_url')||'';
+  if(syncUrl){
+    try{
+      fetch(syncUrl,{
+        method:'POST',headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:'checklist',record}),redirect:'follow'
+      }).then(r=>{
+        if(r.ok) mSyncStatus('✓ Checklist synced to Sheets','#22c55e');
+      }).catch(()=>{});
+    }catch(e){}
+  }
+  // Build daily summary for desktop Checklists tab
+  const dailySummary = {
+    id: record.id,
+    vehicleId: record.vehicleId,
+    vehiclePlate: record.vehiclePlate,
+    driver: record.driver,
+    date: record.date,
+    allPassed: record.allPassed,
+    checkedCount: record.items.filter(i=>i.checked).length,
+    totalCount: record.items.length,
+    failedItems: record.items.filter(i=>!i.checked).map(i=>i.label),
+    notes: record.notes,
+    photoUrl: record.photoUrl||null,
+    submittedAt: record.submittedAt,
+  };
+  // Push to queue for desktop to pick up
+  try{
+    const q = JSON.parse(localStorage.getItem('fleet_cl_queue')||'[]');
+    q.push(dailySummary);
+    localStorage.setItem('fleet_cl_queue', JSON.stringify(q));
+  }catch(e){}
+  document.getElementById('cl-already-done').style.display='block';
+  document.getElementById('cl-form').style.display='none';
+  document.getElementById('cl-notes').value='';
+}
+
+function resetChecklist(){
+  const todayKey = new Date().toISOString().slice(0,10);
+  try{ localStorage.setItem('fleet_cl_done_'+todayKey, JSON.stringify({_reset:true})); }catch(e){}
+  renderChecklist();
+}
+
+// ── Driver Sync (no admin required) ──────────────────────────────────────
+function driverMsg(msg, color){
+  const el = document.getElementById('driver-sync-msg');
+  if(el){ el.textContent=msg; el.style.color=color||'rgba(255,255,255,.4)'; }
+  setTimeout(()=>{ if(el) el.textContent=''; }, 4000);
+}
+
+async function driverSync(){
+  const btn = document.getElementById('sync-btn');
+  if(btn){ btn.textContent='⏳'; btn.style.opacity='.6'; btn.disabled=true; }
+  const url = localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ driverMsg('No sync URL — ask your office to set it up','rgba(245,158,11,.8)'); if(btn){btn.textContent='☁️ Sync';btn.style.opacity='';btn.disabled=false;} return; }
+  try{
+    // Step 1: Save local data up
+    const payload={
+      vehicles,
+      drivers: JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]'),
+      mileageLogs: mileageLogs.map(l=>({...l,photo:l.photo?'[photo]':null})),
+      maintLogs,
+      damageLogs: damageLogs.map(d=>({...d,photo:d.photo?'[photo]':null})),
+      savedAt: new Date().toISOString(),
+    };
+    const json=JSON.stringify(payload);
+    const CHUNK=49000; const chunks=[];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    // Step 2: Load latest from Sheets
+    const res=await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.vehicles){
+      vehicles=data.vehicles;
+      if(data.drivers) localStorage.setItem('fleet_drivers_v1',JSON.stringify(data.drivers));
+      maintLogs=data.maintLogs||[];
+      const inc=(data.mileageLogs||[]).map(l=>({...l,photo:l.photo==='[photo]'?null:l.photo}));
+      mileageLogs=[...new Map([...mileageLogs,...inc].map(l=>[l.id,l])).values()];
+      const incD=(data.damageLogs||[]).map(d=>({...d,photo:d.photo==='[photo]'?null:d.photo}));
+      damageLogs=[...new Map([...damageLogs,...incD].map(d=>[d.id,d])).values()];
+      persist();
+      try{ localStorage.setItem(LS.vehicles,JSON.stringify(vehicles)); localStorage.setItem(LS.maint,JSON.stringify(maintLogs)); }catch(e){}
+      renderVehiclePicker();
+      renderLoginDriverList();
+    }
+    driverMsg('✓ Synced','rgba(34,197,94,.9)');
+  }catch(e){ driverMsg('✗ '+e.message,'rgba(239,68,68,.9)'); }
+  finally{ if(btn){btn.textContent='☁️ Sync';btn.style.opacity='';btn.disabled=false;} }
+}
+
+async function driverSyncLoad(){
+  const url = localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ driverMsg('No sync URL — ask your office to set it up','rgba(245,158,11,.8)'); return; }
+  driverMsg('Loading...','rgba(255,255,255,.6)');
+  try{
+    const res = await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.vehicles){
+      vehicles  = data.vehicles;
+      if(data.drivers) localStorage.setItem('fleet_drivers_v1', JSON.stringify(data.drivers));
+      maintLogs = data.maintLogs||[];
+      const inc = (data.mileageLogs||[]).map(l=>({...l,photo:l.photo==='[photo]'?null:l.photo}));
+      mileageLogs = [...new Map([...mileageLogs,...inc].map(l=>[l.id,l])).values()];
+      const incD = (data.damageLogs||[]).map(d=>({...d,photo:d.photo==='[photo]'?null:d.photo}));
+      damageLogs = [...new Map([...damageLogs,...incD].map(d=>[d.id,d])).values()];
+      persist();
+      try{ localStorage.setItem(LS.vehicles, JSON.stringify(vehicles)); localStorage.setItem(LS.maint, JSON.stringify(maintLogs)); }catch(e){}
+      renderVehiclePicker();
+      // Re-render login list in case drivers updated
+      renderLoginDriverList();
+      driverMsg('✓ Updated — '+vehicles.length+' vehicles','rgba(34,197,94,.9)');
+    } else {
+      driverMsg('No data found','rgba(245,158,11,.8)');
+    }
+  }catch(e){ driverMsg('✗ '+e.message,'rgba(239,68,68,.9)'); }
+}
+
+async function driverSyncSave(){
+  const url = localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ driverMsg('No sync URL — ask your office','rgba(245,158,11,.8)'); return; }
+  driverMsg('Saving...','rgba(255,255,255,.6)');
+  try{
+    const payload = {
+      vehicles,
+      drivers: JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]'),
+      mileageLogs: mileageLogs.map(l=>({...l,photo:l.photo?'[photo]':null})),
+      maintLogs,
+      damageLogs:  damageLogs.map(d=>({...d,photo:d.photo?'[photo]':null})),
+      savedAt: new Date().toISOString(),
+    };
+    const json=JSON.stringify(payload);
+    const CHUNK=49000; const chunks=[];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    driverMsg('✓ Saved','rgba(34,197,94,.9)');
+  }catch(e){ driverMsg('✗ '+e.message,'rgba(239,68,68,.9)'); }
+}
+
+// ── Login screen sync ────────────────────────────────────────────────────
+async function loginSync(){
+  const input = document.getElementById('login-sync-url');
+  const status = document.getElementById('login-sync-status');
+  const url = (input?.value||'').trim();
+  if(!url){ if(status) status.textContent='Paste the URL first'; return; }
+  // Save it immediately
+  try{ localStorage.setItem('fleet_sync_url', url); }catch(e){}
+  if(status){ status.textContent='Loading...'; status.style.color='rgba(255,255,255,.6)'; }
+  try{
+    const res = await fetch(url, {redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.vehicles){
+      vehicles = data.vehicles;
+      if(data.drivers){
+        localStorage.setItem('fleet_drivers_v1', JSON.stringify(data.drivers));
+      }
+      maintLogs = data.maintLogs||[];
+      try{
+        localStorage.setItem(LS.vehicles, JSON.stringify(vehicles));
+        localStorage.setItem(LS.maint, JSON.stringify(maintLogs));
+      }catch(e){}
+      renderLoginDriverList();
+      if(status){
+        status.textContent = '✓ Loaded '+vehicles.length+' vehicles, '+(data.drivers||[]).length+' drivers';
+        status.style.color='rgba(34,197,94,.9)';
+      }
+      // Hide the sync section once loaded
+      setTimeout(()=>{
+        const el = document.getElementById('first-time-sync');
+        if(el) el.style.display='none';
+      }, 2000);
+    } else {
+      throw new Error('No data found. Save from desktop first.');
+    }
+  }catch(e){
+    if(status){ status.textContent='✗ '+e.message; status.style.color='rgba(239,68,68,.9)'; }
+  }
+}
+
+// ── Admin PIN ────────────────────────────────────────────────────────────
+let adminPinBuffer = '';
+
+function getAdminPin(){
+  return localStorage.getItem('fleet_admin_pin')||'0000';
+}
+
+function requestAdminAccess(){
+  adminPinBuffer = '';
+  document.getElementById('admin-pin-error').style.display='none';
+  updateAdminDots();
+  document.getElementById('admin-pin-overlay').style.display='flex';
+}
+
+function closeAdminPin(){
+  adminPinBuffer = '';
+  document.getElementById('admin-pin-overlay').style.display='none';
+}
+
+function adminPinPress(digit){
+  if(adminPinBuffer.length >= 6) return;
+  adminPinBuffer += digit;
+  updateAdminDots();
+  if(adminPinBuffer.length >= 4) setTimeout(checkAdminPin, 150);
+}
+
+function adminPinDelete(){
+  adminPinBuffer = adminPinBuffer.slice(0,-1);
+  updateAdminDots();
+  document.getElementById('admin-pin-error').style.display='none';
+}
+
+function updateAdminDots(){
+  const dots = document.querySelectorAll('#admin-pin-dots .pin-dot');
+  dots.forEach((d,i)=>d.classList.toggle('filled', i < adminPinBuffer.length));
+}
+
+function checkAdminPin(){
+  if(adminPinBuffer === getAdminPin()){
+    closeAdminPin();
+    // Load current settings into form before showing
+    const saved = JSON.parse(localStorage.getItem(LS.settings)||'{}');
+    const pinEl = document.getElementById('s-admin-pin');
+    const apiEl = document.getElementById('s-api-key');
+    const urlEl = document.getElementById('s-sync-url');
+    if(pinEl) pinEl.value = '';
+    if(apiEl) apiEl.value = saved.apiKey||'';
+    const savedUrl = localStorage.getItem('fleet_sync_url')||'';
+    if(urlEl) urlEl.value = savedUrl;
+    console.log('Loaded sync URL:', savedUrl);
+    goScreen('scr-settings','nb-settings');
+  } else {
+    document.getElementById('admin-pin-error').style.display='block';
+    const dots = document.getElementById('admin-pin-dots');
+    dots.style.animation='shake .3s ease';
+    setTimeout(()=>{ dots.style.animation=''; adminPinBuffer=''; updateAdminDots(); },350);
+  }
+}
+
+function saveAdminSettings(){
+  try{
+    const newPin  = (document.getElementById('s-admin-pin')?.value||'').trim();
+    const apiKey  = (document.getElementById('s-api-key')?.value||'').trim();
+    const syncUrl = (document.getElementById('s-sync-url')?.value||'').trim();
+    // Save PIN
+    if(newPin && newPin.length >= 4){
+      localStorage.setItem('fleet_admin_pin', newPin);
+      const pinEl = document.getElementById('s-admin-pin');
+      if(pinEl) pinEl.value = '';
+    }
+    // Save API key
+    try{
+      if(!window.settings) window.settings = {};
+      window.settings.apiKey = apiKey;
+      localStorage.setItem('fleet_driver_settings', JSON.stringify(window.settings));
+    }catch(e){}
+    // Save sync URL
+    localStorage.setItem('fleet_sync_url', syncUrl);
+    // Confirm
+    let msg = '✓ Settings saved!';
+    if(syncUrl) msg += ' Sync URL: ' + syncUrl.slice(0,40) + '...';
+    if(newPin && newPin.length>=4) msg += ' PIN updated.';
+    alert(msg);
+  }catch(err){
+    alert('Error saving: ' + err.message);
+  }
+}
+
+function adminSyncLoad(){
+  const url = document.getElementById('s-sync-url')?.value.trim() || localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ alert('Enter the Apps Script URL first.'); return; }
+  localStorage.setItem('fleet_sync_url', url);
+  mobileSyncLoad();
+}
+
+function adminSyncSave(){
+  const url = document.getElementById('s-sync-url')?.value.trim() || localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ alert('Enter the Apps Script URL first.'); return; }
+  localStorage.setItem('fleet_sync_url', url);
+  mobileSyncSave();
+}
+
+// ── PIN Login ────────────────────────────────────────────────────────────
+let currentPin = '';
+let loginDriverId = null;
+let loggedInDriver = null;
+
+function showLoginScreen(){
+  const el = document.getElementById('scr-login');
+  if(el) el.style.display='flex';
+  document.body.style.overflow='hidden';
+  renderLoginDriverList();
+}
+
+function hideLoginScreen(){
+  const el = document.getElementById('scr-login');
+  if(el) el.style.display='none';
+  document.body.style.overflow='';
+}
+
+function renderLoginDriverList(){
+  const drivers = JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]');
+  const list = document.getElementById('login-driver-list');
+  if(!list) return;
+  if(!drivers.length){
+    list.innerHTML=`<div style="text-align:center;color:rgba(255,255,255,.4);padding:24px;font-size:12px;line-height:1.8">
+      No driver accounts found.<br>Ask your office to add drivers and sync to Sheets,<br>then tap Load in Settings.
+    </div>`;
+    return;
+  }
+  list.innerHTML = drivers.map(d=>`
+    <button class="driver-btn" onclick="selectLoginDriver('${d.id}','${d.name.replace(/'/g,"\'")}')">
+      <span style="font-size:24px">👤</span>
+      <div>
+        <div style="font-weight:700">${d.name}</div>
+        ${d.role==='supervisor'?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px">Supervisor</div>':''}
+      </div>
+      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.3)">›</span>
+    </button>`).join('');
+}
+
+function selectLoginDriver(id, name){
+  loginDriverId = id;
+  currentPin = '';
+  document.getElementById('login-driver-step').style.display='none';
+  document.getElementById('login-pin-step').style.display='block';
+  document.getElementById('login-driver-greeting').textContent = 'Hi '+name+', enter your PIN';
+  document.getElementById('pin-error').style.display='none';
+  updatePinDots();
+}
+
+function loginBack(){
+  loginDriverId = null;
+  currentPin = '';
+  document.getElementById('login-driver-step').style.display='block';
+  document.getElementById('login-pin-step').style.display='none';
+  document.getElementById('pin-error').style.display='none';
+}
+
+function pinPress(digit){
+  if(currentPin.length >= 6) return;
+  currentPin += digit;
+  updatePinDots();
+  if(currentPin.length >= 4){
+    // Try to match after a brief delay (show last dot filling)
+    setTimeout(checkPin, 150);
+  }
+}
+
+function pinDelete(){
+  currentPin = currentPin.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pin-error').style.display='none';
+}
+
+function updatePinDots(){
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((dot,i)=>{ dot.classList.toggle('filled', i < currentPin.length); });
+}
+
+function checkPin(){
+  const drivers = JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]');
+  const driver  = drivers.find(d=>d.id===loginDriverId);
+  if(!driver) return;
+  if(String(driver.pin) === String(currentPin)){
+    // Success!
+    loggedInDriver = driver;
+    // Update last active
+    driver.lastActive = new Date().toISOString();
+    localStorage.setItem('fleet_drivers_v1', JSON.stringify(drivers));
+    // Set as the logged-in driver for this session
+    try{ sessionStorage.setItem('fleet_logged_in', JSON.stringify({id:driver.id,name:driver.name,role:driver.role,vehicleId:driver.vehicleId})); }catch(e){}
+    // Auto-select vehicle if assigned
+    if(driver.vehicleId){
+      selectedVehicleId = driver.vehicleId;
+      try{ localStorage.setItem(LS.selected, driver.vehicleId); }catch(e){}
+    }
+    // Update settings with driver name
+    settings.driverName = driver.name;
+    try{ localStorage.setItem(LS.settings, JSON.stringify(settings)); }catch(e){}
+    document.getElementById('dmg-driver').value = driver.name;
+    document.getElementById('h-sub').textContent = driver.name + (driver.vehicleId ? ' · '+( vehicles.find(v=>v.id===driver.vehicleId)?.plate||'') : '');
+    hideLoginScreen();
+    renderVehiclePicker();
+    if(driver.vehicleId) goScreen('scr-mileage','nb-mileage');
+  } else {
+    // Wrong PIN
+    document.getElementById('pin-error').style.display='block';
+    // Shake animation
+    const dots = document.getElementById('pin-dots');
+    dots.style.animation='shake .3s ease';
+    setTimeout(()=>{ dots.style.animation=''; currentPin=''; updatePinDots(); },350);
+  }
+}
+
+function logOut(){
+  try{ sessionStorage.removeItem('fleet_logged_in'); }catch(e){}
+  loggedInDriver = null;
+  currentPin = '';
+  loginDriverId = null;
+  document.getElementById('login-driver-step').style.display='block';
+  document.getElementById('login-pin-step').style.display='none';
+  showLoginScreen();
+}
+
+// ── Mobile Sync ──────────────────────────────────────────────────────────
+function saveSyncUrl(){
+  const url = document.getElementById('s-sync-url')?.value.trim()||'';
+  try{ localStorage.setItem('fleet_sync_url', url); }catch(e){}
+}
+function mSyncStatus(msg, color){
+  const el=document.getElementById('m-sync-status');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--text3)'; }
+}
+async function mobileSyncSave(){
+  const url = document.getElementById('s-sync-url')?.value.trim() || localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ alert('Enter the Apps Script URL in Settings first.'); return; }
+  mSyncStatus('Saving...','#d97706');
+  try{
+    const payload = {
+      vehicles,
+      mileageLogs: mileageLogs.map(l=>({...l,photo:l.photo?'[photo]':null})),
+      maintLogs,
+      damageLogs:  damageLogs.map(d=>({...d,photo:d.photo?'[photo]':null})),
+      savedAt: new Date().toISOString(),
+    };
+    const json = JSON.stringify(payload);
+    const CHUNK=49000; const chunks=[];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    mSyncStatus('✓ Saved '+new Date().toLocaleTimeString(),'#22c55e');
+  }catch(e){ mSyncStatus('✗ '+e.message,'#ef4444'); }
+}
+async function mobileSyncLoad(){
+  const url = document.getElementById('s-sync-url')?.value.trim() || localStorage.getItem('fleet_sync_url')||'';
+  if(!url){ alert('Enter the Apps Script URL in Settings first.'); return; }
+  mSyncStatus('Loading...','#d97706');
+  try{
+    const res=await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.vehicles){
+      vehicles  = data.vehicles;
+      maintLogs = data.maintLogs||[];
+      const inc = data.mileageLogs||[];
+      inc.forEach(l=>{ if(l.photo==='[photo]') l.photo=null; });
+      mileageLogs = [...new Map([...mileageLogs,...inc].map(l=>[l.id,l])).values()];
+      const incD = data.damageLogs||[];
+      incD.forEach(d=>{ if(d.photo==='[photo]') d.photo=null; });
+      damageLogs = [...new Map([...damageLogs,...incD].map(d=>[d.id,d])).values()];
+      persist();
+      try{ localStorage.setItem(LS.vehicles, JSON.stringify(vehicles)); localStorage.setItem(LS.maint, JSON.stringify(maintLogs)); }catch(e){}
+      renderVehiclePicker();
+      mSyncStatus('✓ Loaded '+vehicles.length+' vehicles','#22c55e');
+    } else { throw new Error('No data. Save from desktop first.'); }
+  }catch(e){ mSyncStatus('✗ '+e.message,'#ef4444'); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+hydrate();
+renderVehiclePicker();
+if(selectedVehicleId){
+  const v = vehicles.find(x=>x.id===selectedVehicleId);
+  if(v) document.getElementById('h-sub').textContent = v.plate+(v.name?' · '+v.name:'');
+}
+// Pre-fill driver name
+if(settings.driverName) document.getElementById('dmg-driver').value = settings.driverName;
+</script>
+
+<script>
+// ── PWA: Inject manifest ──────────────────────────────────────────────────
+(function(){
+  const manifest = {"name": "Fleet Driver", "short_name": "Fleet Driver", "description": "Driver app for fleet management \u2014 mileage, checklists, damage reports", "start_url": ".", "display": "standalone", "orientation": "portrait", "background_color": "#f0f4f8", "theme_color": "#1e3a5f", "categories": ["business", "productivity"], "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e3a5f'/%3E%3Ctext x='256' y='330' font-size='280' text-anchor='middle' fill='white'%3E%F0%9F%9A%9B%3C/text%3E%3C/svg%3E", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}]};
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest').href = url;
+})();
+
+// ── PWA: Install prompt ───────────────────────────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  // Show install banner after 3 seconds if not already installed
+  setTimeout(() => {
+    if(_installPrompt && !window.matchMedia('(display-mode: standalone)').matches){
+      showInstallBanner();
+    }
+  }, 3000);
+});
+
+function showInstallBanner(){
+  if(document.getElementById('pwa-install-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;background:#1e3a5f;color:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);font-family:Inter,system-ui,sans-serif';
+  banner.innerHTML = `
+    <span style="font-size:28px">🚛</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700">Fleet Driver</div>
+      <div style="font-size:11px;opacity:.8">Add to your home screen</div>
+    </div>
+    <button onclick="installPWA()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Install</button>
+    <button onclick="document.getElementById('pwa-install-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px">✕</button>`;
+  document.body.appendChild(banner);
+}
+
+function installPWA(){
+  if(!_installPrompt) {
+    // iOS fallback
+    alert('To install: tap the Share button (⬆) then "Add to Home Screen"');
+    return;
+  }
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r => {
+    if(r.outcome === 'accepted') document.getElementById('pwa-install-banner')?.remove();
+    _installPrompt = null;
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>My Tools</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --navy:#1e3a5f;--blue:#0ea5e9;--green:#22c55e;--amber:#f59e0b;
+  --text:#1e3a5f;--text2:#475569;--text3:#94a3b8;--bg:#f0f4f8;
+  --card:#fff;--border:rgba(0,0,0,.08);--font:'Inter',system-ui,sans-serif
+}
+body{font-family:var(--font);background:var(--bg);min-height:100vh;padding:0 0 40px}
+
+/* Header */
+.header{background:var(--navy);padding:28px 20px 24px;text-align:center;margin-bottom:28px}
+.header-logo{font-size:32px;margin-bottom:10px}
+.header-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px}
+.header-sub{font-size:13px;color:rgba(255,255,255,.45);margin-top:4px}
+
+/* Grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 16px;max-width:900px;margin:0 auto}
+
+/* Tool card */
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;display:block;transition:transform .15s,box-shadow .15s;border-top:4px solid transparent}
+.tool-card:active{transform:scale(.98)}
+.tool-card.blue{border-top-color:var(--blue)}
+.tool-card.green{border-top-color:var(--green)}
+.tool-card.amber{border-top-color:var(--amber)}
+.tool-card.navy{border-top-color:var(--navy)}
+.card-body{padding:18px 18px 14px}
+.card-icon{font-size:32px;margin-bottom:10px}
+.card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px}
+.card-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px}
+.card-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;background:#f0f4f8;color:var(--text2)}
+.card-footer{padding:10px 18px;background:#fafcff;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-url{font-size:10px;color:var(--text3);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.card-open{font-size:11px;font-weight:700;color:var(--blue)}
+
+/* Section label */
+.section-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:0 16px;margin:24px auto 10px;max-width:900px}
+
+/* Install tip */
+.install-tip{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:0 16px 24px;max-width:868px;margin-left:auto;margin-right:auto;display:flex;gap:12px;align-items:flex-start}
+.tip-icon{font-size:22px;flex-shrink:0}
+.tip-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
+.tip-text{font-size:11px;color:var(--text3);line-height:1.6}
+
+/* PWA */
+@media(display-mode:standalone){
+  .header{padding-top:52px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🗂</div>
+  <div class="header-title">My Tools</div>
+  <div class="header-sub">Tap any tool to open it</div>
+</div>
+
+<div style="max-width:900px;margin:0 auto">
+  <div class="install-tip">
+    <div class="tip-icon">📱</div>
+    <div>
+      <div class="tip-title">Install as an app</div>
+      <div class="tip-text">
+        <strong>Android:</strong> tap the 3-dot menu → Add to Home screen<br>
+        <strong>iPhone:</strong> tap Share ⬆ → Add to Home Screen
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Tools -->
+<div class="section-label">📱 Mobile Apps</div>
+<div class="grid">
+
+  <a class="tool-card blue" href="shipment_tracker_mobile.html">
+    <div class="card-body">
+      <div class="card-icon">🚢</div>
+      <div class="card-title">Shipment Tracker</div>
+      <div class="card-desc">Track containers, PO status, landed costs and sell prices. Search by item or vendor. Sync with desktop via Google Sheets.</div>
+      <div class="card-tags">
+        <span class="tag">📦 Shipments</span>
+        <span class="tag">💰 Costs</span>
+        <span class="tag">☁️ Syncs</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">shipment_tracker_mobile.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card navy" href="fleet_driver.html">
+    <div class="card-body">
+      <div class="card-icon">🚛</div>
+      <div class="card-title">Fleet Driver</div>
+      <div class="card-desc">Driver app for fleet management. Log mileage with AI odometer reading, submit damage reports, complete morning checklists. PIN login per driver.</div>
+      <div class="card-tags">
+        <span class="tag">🛣 Mileage</span>
+        <span class="tag">☑️ Checklist</span>
+        <span class="tag">🚨 Damage</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">fleet_mobile.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+</div>
+
+<!-- Desktop Tools -->
+<div class="section-label">🖥 Desktop Tools</div>
+<div class="grid">
+
+  <a class="tool-card blue" href="shipment_cost_tracker.html">
+    <div class="card-body">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Shipment Cost Tracker</div>
+      <div class="card-desc">Full shipment management — PO import, cost calculations, container tracking, item search, vendor search, and Google Sheets sync.</div>
+      <div class="card-tags">
+        <span class="tag">🚢 Transit</span>
+        <span class="tag">📋 Ordered</span>
+        <span class="tag">✅ Arrived</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">shipment_cost_tracker.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card green" href="sales_dashboard.html">
+    <div class="card-body">
+      <div class="card-icon">📈</div>
+      <div class="card-title">Sales Dashboard</div>
+      <div class="card-desc">Customer sales analysis, drop alerts, reorder tracking, seasonality heatmap, salesman performance. Syncs with mobile version.</div>
+      <div class="card-tags">
+        <span class="tag">⚠️ Alerts</span>
+        <span class="tag">📅 Seasonal</span>
+        <span class="tag">👤 Salesmen</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">sales_dashboard.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card navy" href="fleet_desktop.html">
+    <div class="card-body">
+      <div class="card-icon">🏢</div>
+      <div class="card-title">Fleet Manager — Office</div>
+      <div class="card-desc">Fleet overview, maintenance scheduling, damage report inbox, driver checklists with 30-day calendar tracker. Manage drivers and PINs.</div>
+      <div class="card-tags">
+        <span class="tag">🔧 Maintenance</span>
+        <span class="tag">📸 Damage</span>
+        <span class="tag">☑️ Checklists</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">fleet_desktop.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card amber" href="inventory_order_tool_v5.html">
+    <div class="card-body">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Inventory Order Analyzer</div>
+      <div class="card-desc">Upload sales, stock and fill-in data. Analyze what needs ordering, build loads by CBM, manage containers.</div>
+      <div class="card-tags">
+        <span class="tag">📦 Stock</span>
+        <span class="tag">🏗 Load Builder</span>
+        <span class="tag">📐 CBM</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">inventory_order_tool_v5.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card green" href="sales_dashboard_mobile.html">
+    <div class="card-body">
+      <div class="card-icon">📱</div>
+      <div class="card-title">Sales Dashboard — Mobile</div>
+      <div class="card-desc">Mobile version of the sales dashboard. Customer overview, alerts, and salesman view optimized for phone.</div>
+      <div class="card-tags">
+        <span class="tag">📊 Overview</span>
+        <span class="tag">⚠️ Alerts</span>
+        <span class="tag">👤 Salesmen</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">sales_dashboard_mobile.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+  <a class="tool-card blue" href="container_tracker.html">
+    <div class="card-body">
+      <div class="card-icon">🗂</div>
+      <div class="card-title">Container Tracker</div>
+      <div class="card-desc">Track individual containers with status, ETAs and notes.</div>
+      <div class="card-tags">
+        <span class="tag">🚢 Containers</span>
+        <span class="tag">📅 ETA</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="card-url">container_tracker.html</span>
+      <span class="card-open">Open →</span>
+    </div>
+  </a>
+
+</div>
+
+<div style="text-align:center;margin-top:32px;font-size:11px;color:var(--text3);padding:0 16px">
+  Hosted at https://yl0252.github.io/tools/ — bookmark this page.<br>
+  Open any tool and tap Share → Add to Home Screen to install.
+</div>
+
+</body>
+</html>

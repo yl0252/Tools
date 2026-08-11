@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>Shipment Tracker Mobile</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#1e3a5f;--panel:#f8fafc;--teal:#0891b2;--green:#16a34a;--amber:#d97706;--red:#dc2626;--ink:#1e3a5f;--ink2:#475569;--ink3:#94a3b8;--border:rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Inter',sans-serif;background:#f1f5f9;color:var(--ink);min-height:100vh;
+  display:flex;flex-direction:column;padding-bottom:68px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:68px;background:#1e3a5f;
+  border-top:1px solid rgba(255,255,255,.1);display:flex;z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;background:none;border:none;cursor:pointer;font-family:Inter,sans-serif;color:rgba(255,255,255,.5);
+  font-size:10px;font-weight:600;padding:8px 4px}
+.nav-btn.active{color:#fff}
+.nav-icon{font-size:20px;line-height:1}
+.m-header{background:linear-gradient(135deg,#0d1f3c,#1a2e54);padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.m-header-title{font-size:16px;font-weight:800;color:#fff}
+.m-header-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.m-back{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;
+  border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+.screen{display:none;flex-direction:column}
+.screen.active{display:flex}
+.m-search{margin:10px 12px;position:relative}
+.m-search input{width:100%;background:rgba(255,255,255,.07);border:1.5px solid var(--border);
+  border-radius:10px;padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;
+  outline:none;color:var(--ink)}
+.m-search input:focus{border-color:var(--teal)}
+.m-search input::placeholder{color:var(--ink3)}
+.filter-pills{display:flex;gap:6px;padding:0 12px 10px;overflow-x:auto}
+.filter-pills::-webkit-scrollbar{display:none}
+.pill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:700;
+  border:1.5px solid var(--border);background:#fff;color:var(--ink3);
+  white-space:nowrap;cursor:pointer;font-family:Inter,sans-serif}
+.pill.active{background:rgba(8,145,178,.12);color:var(--teal);border-color:rgba(8,145,178,.3)}
+.ship-card{background:#ffffff;border:1px solid var(--border);border-radius:12px;
+  margin:0 12px 10px;padding:14px;cursor:pointer;position:relative;overflow:hidden}
+.ship-card:active{background:#f0f9ff}
+.ship-card-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
+.ship-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ship-card-num{font-family:monospace;font-size:14px;font-weight:800;color:var(--ink)}
+.ship-card-eta{font-size:13px;font-weight:800;text-align:right}
+.ship-card-vendor{font-size:11px;color:var(--ink3);margin-top:4px}
+.ship-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.ship-card-status{padding:3px 9px;border-radius:10px;font-size:10px;font-weight:700}
+.ship-card-val{font-size:12px;font-weight:700;color:var(--teal);font-family:monospace}
+
+/* Ship detail */
+.det-section{margin:12px 12px 0}
+.det-section-title{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:8px;padding:0 2px}
+.det-card{background:#ffffff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.det-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.det-info-cell{background:#f8fafc;padding:10px 12px}
+.det-info-lbl{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.det-info-val{font-size:13px;font-weight:700;color:var(--ink)}
+.item-row{background:#f8fafc;border-bottom:1px solid var(--border);padding:10px 14px}
+.item-row:last-child{border-bottom:none}
+.item-row-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.item-code-m{font-family:monospace;font-size:12px;font-weight:700;color:var(--teal)}
+.item-landed{font-size:13px;font-weight:800;color:var(--ink);font-family:monospace}
+.item-row-bottom{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-top:4px}
+.cost-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 12px 0}
+.cost-box{background:#ffffff;border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+.cost-box-val{font-size:16px;font-weight:800;color:var(--teal);font-family:monospace}
+.cost-box-lbl{font-size:9px;color:var(--ink3);text-transform:uppercase;margin-top:2px}
+
+/* Upload screen */
+.upload-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:16px;background:rgba(8,145,178,.06);border:1.5px dashed rgba(8,145,178,.3);
+  border-radius:12px;color:var(--teal);font-size:13px;font-weight:700;
+  cursor:pointer;font-family:Inter,sans-serif;position:relative;margin-bottom:12px}
+.upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.upload-status{font-size:11px;color:var(--ink3);text-align:center;padding:8px}
+
+::-webkit-scrollbar{display:none}
+</style>
+
+  <!-- PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Shipments">
+  <meta name="application-name" content="Shipments">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="description" content="Track shipments, costs, and container status on the go">
+  <link id="pwa-manifest" rel="manifest">
+  <!-- Apple touch icon (SVG inline as data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e3a5f'/%3E%3Ctext x='256' y='330' font-size='280' text-anchor='middle' fill='white'%3E🚢%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<!-- Shipments screen -->
+<div class="screen active" id="scr-ships">
+  <div class="m-header">
+    <div>
+      <div class="m-header-title">🚢 Shipments</div>
+      <div class="m-header-sub" id="m-ship-count">Loading...</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:18px;font-weight:800;color:var(--teal)" id="m-kpi-ships">0</div>
+      <div style="font-size:10px;color:var(--ink3)">Total</div>
+    </div>
+  </div>
+  <div style="padding:10px 12px 0">
+    <input class="m-search" style="width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;color:#1e3a5f" placeholder="🔍 Search container, vendor, PO..." oninput="mRenderShips()" id="m-ship-search">
+  </div>
+  <div class="filter-pills" style="padding:8px 12px">
+    <div class="pill active" id="mf-all" onclick="mSetShipFilter('all',this)">All</div>
+    <div class="pill" id="mf-ordered" onclick="mSetShipFilter('ordered',this)">📋 Ordered</div>
+    <div class="pill" id="mf-scheduled" onclick="mSetShipFilter('scheduled',this)">📅 Scheduled</div>
+    <div class="pill" id="mf-transit" onclick="mSetShipFilter('transit',this)">🚢 Transit</div>
+    <div class="pill" id="mf-arrived" onclick="mSetShipFilter('arrived',this)">✅ Arrived</div>
+    <div class="pill" id="mf-delayed" onclick="mSetShipFilter('delayed',this)">⚠️ Delayed</div>
+  </div>
+  <div id="m-ship-list" style="padding:2px 0 8px"></div>
+</div>
+
+<!-- Shipment Detail screen -->
+<div class="screen" id="scr-ship-det">
+  <div class="m-header">
+    <button class="m-back" onclick="mShowScreen('scr-ships')">← Back</button>
+    <div style="text-align:right">
+      <div class="m-header-title" id="m-det-ship-num" style="font-size:13px"></div>
+      <div class="m-header-sub" id="m-det-ship-status"></div>
+    </div>
+  </div>
+  <div id="m-ship-det-body" style="overflow-y:auto;flex:1;padding-bottom:16px"></div>
+</div>
+
+<!-- Item Search screen -->
+<div class="screen" id="scr-items">
+  <div class="m-header">
+    <div><div class="m-header-title">🔍 Search by Item</div></div>
+  </div>
+  <div style="padding:10px 12px 0">
+    <input style="width:100%;background:#fff;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;padding:10px 14px;font-size:14px;font-family:Inter,sans-serif;outline:none;color:#1e3a5f" placeholder="Search item # or description..." oninput="mRenderItems()" id="m-item-search">
+  </div>
+  <div id="m-item-list" style="flex:1;overflow-y:auto;padding:8px 0"></div>
+</div>
+
+<!-- Item Detail screen -->
+<div class="screen" id="scr-item-det">
+  <div class="m-header">
+    <button class="m-back" onclick="mShowScreen('scr-items')">← Back</button>
+    <div style="text-align:right">
+      <div class="m-header-title" id="m-item-det-code" style="font-size:13px;color:var(--teal)"></div>
+      <div class="m-header-sub" id="m-item-det-desc"></div>
+    </div>
+  </div>
+  <div id="m-item-det-body" style="overflow-y:auto;flex:1;padding-bottom:16px"></div>
+</div>
+
+<!-- Upload screen -->
+<div class="screen" id="scr-upload">
+  <div class="m-header">
+    <div><div class="m-header-title">⬆ Upload</div></div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+    <div style="background:#ffffff;border-radius:12px;padding:14px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:10px">📄 Item Master Sheet</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Upload your sheet with Item#, CBM, and Tariff% columns</div>
+      <label class="upload-btn">
+        <input type="file" accept=".xlsx,.xls" onchange="uploadItemMaster(this)">
+        ⬆ Upload Item Sheet
+      </label>
+      <div id="m-item-sheet-status" class="upload-status"></div>
+    </div>
+    <div style="background:#ffffff;border-radius:12px;padding:14px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:10px">📋 PO / Shipment Report</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Upload your PO report or shipment list — replaces current data</div>
+      <label class="upload-btn">
+        <input type="file" accept=".xlsx,.xls" onchange="uploadShipmentSheet(this)">
+        ⬆ Upload Shipment Report
+      </label>
+      <div id="m-ship-upload-status" class="upload-status"></div>
+    </div>
+    <!-- Sync section -->
+    <div style="background:#ffffff;border-radius:12px;padding:14px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:10px">☁️ Google Sheets Sync</div>
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;line-height:1.5">Sync shipments and item sheet across devices via Google Sheets</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:5px">Apps Script URL</div>
+        <input id="m-sync-url" type="url" placeholder="https://script.google.com/macros/s/..."
+          style="width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;font-family:Inter,sans-serif;outline:none;color:var(--ink)"
+          oninput="mSaveSyncUrl()">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button onclick="mSyncLoad()" style="flex:1;padding:10px;background:#f1f5f9;border:1.5px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;color:var(--ink)">⬇ Load</button>
+        <button onclick="mSyncSave()" style="flex:1;padding:10px;background:#1e3a5f;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">⬆ Save</button>
+      </div>
+      <div id="m-sync-status" style="font-size:11px;color:var(--ink3);text-align:center;min-height:16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-ships" onclick="mShowScreen('scr-ships')">
+    <span class="nav-icon">🚢</span>Shipments
+  </button>
+  <button class="nav-btn" id="nav-items" onclick="mShowScreen('scr-items')">
+    <span class="nav-icon">🔍</span>Search
+  </button>
+  <button class="nav-btn" id="nav-upload" onclick="mShowScreen('scr-upload')">
+    <span class="nav-icon">⬆</span>Upload
+  </button>
+</nav>
+
+<script>
+
+// ── Mobile Sync ──────────────────────────────────────────────────────────
+function mSaveSyncUrl(){
+  const url = document.getElementById('m-sync-url').value.trim();
+  try{ localStorage.setItem('sct_sync_url', url); }catch(e){}
+  // Also update the desktop sync-url input if it exists
+  const el = document.getElementById('sync-url');
+  if(el) el.value = url;
+}
+
+function mSetSyncStatus(msg, color){
+  const el = document.getElementById('m-sync-status');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--ink3)'; }
+}
+
+async function mSyncSave(){
+  const url = document.getElementById('m-sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL first.'); return; }
+  mSetSyncStatus('Saving...','#d97706');
+  try{
+    const payload = {
+      shipments,
+      itemSheet: sheetRows||null,
+      itemCols:  sheetCols||null,
+      itemName:  localStorage.getItem('sct_sheet_name')||'',
+    };
+    const json = JSON.stringify(payload);
+    const CHUNK = 49000;
+    const chunks = [];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const itemMsg = sheetRows ? ' + item sheet' : '';
+    mSetSyncStatus('✓ Saved '+shipments.length+' shipments'+itemMsg,'#16a34a');
+  }catch(err){ mSetSyncStatus('✗ '+err.message,'#dc2626'); }
+}
+
+async function mSyncLoad(){
+  const url = document.getElementById('m-sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL first.'); return; }
+  mSetSyncStatus('Loading...','#d97706');
+  try{
+    const res = await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = JSON.parse(await res.text());
+    if(data.error) throw new Error(data.error);
+    if(data.shipments){
+      shipments = data.shipments;
+      if(data.itemSheet&&data.itemSheet.length&&data.itemCols){
+        sheetRows = data.itemSheet;
+        sheetCols = data.itemCols;
+        const name = data.itemName||'';
+        try{ localStorage.setItem('sct_sheet_name', name); }catch(e){}
+        idbSave('item_sheet', sheetRows).catch(()=>{});
+        idbSave('item_sheet_cols', sheetCols).catch(()=>{});
+        applyItemSheetToShipments(sheetRows, sheetCols);
+        const el=document.getElementById('m-item-sheet-status');
+        if(el) el.innerHTML='<span style="color:#16a34a">✓ '+sheetRows.length+' items loaded from sync</span>';
+      }
+    } else {
+      shipments = Array.isArray(data)?data:[];
+    }
+    persist();
+    activeItemId=null;
+    mRenderShips();
+    mUpdateUploadStatus();
+    mSetSyncStatus('✓ Loaded '+shipments.length+' shipments','#16a34a');
+  }catch(err){ mSetSyncStatus('✗ '+err.message,'#dc2626'); }
+}
+
+// ── Apply item sheet CBM/tariff to all shipments ─────────────────────────
+function applyItemSheetToShipments(rows, cols){
+  if(!rows||!rows.length||!cols) return;
+  const itemCol   = cols.itemCol;
+  const cbmCol    = cols.cbmCol;
+  const tariffCol = cols.tariffCol;
+  if(!itemCol) return;
+  let updated = 0;
+  shipments.forEach(ship=>{
+    (ship.items||[]).forEach(it=>{
+      const row = rows.find(r=>String(r[itemCol]||'').trim().toUpperCase()===String(it.item||'').trim().toUpperCase());
+      if(!row) return;
+      if(cbmCol && row[cbmCol]!=='' && row[cbmCol]!=null){
+        const cbm = parseFloat(row[cbmCol]);
+        if(!isNaN(cbm)&&cbm>0){ it.cbm=cbm; it.shipManual=null; updated++; }
+      }
+      if(tariffCol && row[tariffCol]!=='' && row[tariffCol]!=null){
+        const tariff = parseFloat(row[tariffCol]);
+        if(!isNaN(tariff)){ it.tariff=tariff; updated++; }
+      }
+    });
+  });
+  if(updated>0){ persist(); console.log('Applied item sheet: '+updated+' fields updated'); }
+}
+
+function mPopulateDataLists(){
+  const vd = document.getElementById('m-vendor-datalist');
+  if(vd){
+    const vendors = [...new Set(shipments.map(s=>s.vendor).filter(Boolean))].sort();
+    vd.innerHTML = vendors.map(v=>'<option value="'+v+'">').join('');
+  }
+  const id = document.getElementById('m-item-datalist');
+  if(id){
+    const items = [...new Set(shipments.flatMap(s=>(s.items||[]).map(it=>it.item)).filter(Boolean))].sort();
+    id.innerHTML = items.map(i=>'<option value="'+i+'">').join('');
+  }
+}
+
+// ── Mobile safety: patch getElementById before ANY desktop code runs ──────
+(function(){
+  const _orig = document.getElementById.bind(document);
+  const noop = ()=>{};
+  function makeDummy(){
+    const d = {
+      textContent:'', innerHTML:'', value:'', checked:false,
+      style:{display:'',background:'',color:'',border:''},
+      classList:{add:noop,remove:noop,contains:()=>false,toggle:noop},
+      querySelectorAll:()=>({forEach:noop,length:0}),
+      addEventListener:noop, focus:noop, blur:noop,
+      getAttribute:()=>null, setAttribute:noop, removeAttribute:noop,
+      dataset:{}, options:[], selectedIndex:0,
+    };
+    // Use defineProperty to silently absorb any property assignment
+    return new Proxy(d, {
+      set(t,k,v){ try{if(k in t)t[k]=v;}catch(e){} return true; },
+      get(t,k){ if(k in t)return t[k]; return k==='style'?{}:typeof k==='string'?noop:undefined; }
+    });
+  }
+  document.getElementById = function(id){
+    return _orig(id) || makeDummy();
+  };
+})();
+
+// Suppress desktop-only DOM errors silently
+window.addEventListener('error', function(e){
+  if(e.message && e.message.includes('Cannot set properties of null')) {
+    e.preventDefault(); return true;
+  }
+}, true);
+
+
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const LS = 'shipments_cost_v1';
+const STATUS = {
+  ordered:{label:'📋 Ordered',  cls:'badge-ordered', li:'st-ordered'},
+  transit:{label:'🚢 In Transit',cls:'badge-transit', li:'st-transit'},
+  customs:{label:'🏛 Customs',  cls:'badge-customs', li:'st-transit'},
+  arrived:{label:'✅ Arrived',  cls:'badge-arrived', li:'st-arrived'},
+  delayed:{label:'⚠️ Delayed', cls:'badge-delayed', li:'st-delayed'},
+};
+
+// ── State ─────────────────────────────────────────────────────────────────
+let shipments   = [];
+let activeId    = null;
+let activeTab   = 'costs';
+let activeFilter= 'all';
+let editingShipId = null;
+let editingItemId = null;
+let browseSelected= new Set();
+let sheetRows   = null;
+let sheetCols   = null;
+
+// ── IndexedDB for item sheet (no size limit) ──────────────────────────────
+const IDB_NAME='sct_v1', IDB_STORE='files';
+let _idb=null;
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(_idb){res(_idb);return;}
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess=e=>{_idb=e.target.result;res(_idb);};
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+function idbSave(key,val){
+  return idbOpen().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(val,key);
+    tx.oncomplete=()=>res();
+    tx.onerror=e=>rej(e.target.error);
+  }));
+}
+function idbLoad(key){
+  return idbOpen().then(db=>new Promise((res,rej)=>{
+    const req=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=e=>rej(e.target.error);
+  }));
+}
+
+// ── Persist ───────────────────────────────────────────────────────────────
+function persist(){ try{ localStorage.setItem(LS, JSON.stringify(shipments)); }catch(e){} }
+function hydrate(){
+  try{
+    const saved = localStorage.getItem(LS);
+    if(saved && saved !== '[]'){
+      shipments = JSON.parse(saved);
+    } else {
+      // Pre-load from Report.xlsx (45 POs imported)
+      shipments = [{"id":"po_139009_0","container":"PO-139009","carrier":"","status":"transit","eta":"2026-08-04","etd":"2026-03-06","vendor":"ADIL TEKS PLASTIK AMBALAJ SAN VE TIC A.S","po":"139009","pol":"","pod":"","containerCbm":68,"shippingCost":5500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $16,603.75 | 1 items | 1175 units","addedAt":"2026-07-28T20:34:33.975769","items":[{"id":"item_139009_0_5408551448842382840","item":"PLP-C7MED","desc":"PLASTIC CUPS CRC KOSHER /7OZ 25/100","cost":9.45,"cbm":null,"qty":1175.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139011_1","container":"PO-139011","carrier":"","status":"transit","eta":"2026-08-15","etd":"2026-03-06","vendor":"ADIL TEKS PLASTIK AMBALAJ SAN VE TIC A.S","po":"139011","pol":"","pod":"","containerCbm":68,"shippingCost":5400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $16,551.00 | 1 items | 1180 units","addedAt":"2026-07-28T20:34:33.975822","items":[{"id":"item_139011_1_5408551448842382840","item":"PLP-C7MED","desc":"PLASTIC CUPS CRC KOSHER /7OZ 25/100","cost":9.45,"cbm":null,"qty":1180.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139247_2","container":"PO-139247","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-04-17","vendor":"ADIL TEKS PLASTIK AMBALAJ SAN VE TIC A.S","po":"139247","pol":"","pod":"","containerCbm":68,"shippingCost":3800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $17,867.00 | 1 items | 2084 units","addedAt":"2026-07-28T20:34:33.975842","items":[{"id":"item_139247_2_3523297033642649102","item":"PLP-C7","desc":"PLASTIC PALACE PLASTIC CUPS CRC KOSHER /7OZ 12/100","cost":6.75,"cbm":null,"qty":2084.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139248_3","container":"PO-139248","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-04-17","vendor":"ADIL TEKS PLASTIK AMBALAJ SAN VE TIC A.S","po":"139248","pol":"","pod":"","containerCbm":68,"shippingCost":3800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $17,867.00 | 1 items | 2084 units","addedAt":"2026-07-28T20:34:33.975855","items":[{"id":"item_139248_3_3523297033642649102","item":"PLP-C7","desc":"PLASTIC PALACE PLASTIC CUPS CRC KOSHER /7OZ 12/100","cost":6.75,"cbm":null,"qty":2084.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139263_4","container":"PO-139263","carrier":"","status":"transit","eta":"2026-08-23","etd":"2026-04-20","vendor":"APEX GLOVE","po":"139263","pol":"","pod":"","containerCbm":68,"shippingCost":8500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $113,204.00 | 3 items | 4370 units","addedAt":"2026-07-28T20:34:33.975871","items":[{"id":"item_139263_4_-1247297689225477804","item":"GLOVE-LL","desc":"#7727 GLOVEPRO POWDER FREE LATEX GLOVES LARGE 10/100 (CRC KOSHER KFP)","cost":24.0,"cbm":null,"qty":1500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139263_4_-3585844420842697970","item":"GLOVE-LM","desc":"#7726 GLOVEPRO POWDER FREE LATEX GLOVES MEDIUM 10/100 (CRC KOSHER KFP)","cost":24.0,"cbm":null,"qty":2790.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139263_4_-3585844420842697970","item":"GLOVE-LM","desc":"#7726 GLOVEPRO POWDER FREE LATEX GLOVES MEDIUM 10/100 (CRC KOSHER KFP)","cost":21.8,"cbm":null,"qty":80.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139314_5","container":"PO-139314","carrier":"","status":"transit","eta":"2026-08-20","etd":"2026-04-28","vendor":"CAPRICORN SPA","po":"139314","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $24,614.00 | 6 items | 764 units","addedAt":"2026-07-28T20:34:33.975892","items":[{"id":"item_139314_5_-2592561788543937457","item":"SPOT-CL128-2","desc":"#3814 CONTAINER WITH LID 128 OZ CRC KOSHER 18/2 PACK","cost":25.21,"cbm":null,"qty":60.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139314_5_3399591589116108581","item":"SPOT-CL64-10","desc":"#7759 SPOT CONTAINER WITH LID 64OZ 4LB CRC KOSHER 8/10 PACK","cost":21.68,"cbm":null,"qty":200.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139314_5_5263927562124371801","item":"SPOT-CL64-3","desc":"#3808 SPOT CONTAINER WITH LID 64OZ 4LB CRC KOSHER 24/3 PACK","cost":18.0,"cbm":null,"qty":84.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139314_5_7015624602875751600","item":"SPOT-CL64-6","desc":"#3806 SPOT CONTAINER WITH LID 64OZ 4LB CRC KOSHER 12/6 PACK","cost":17.72,"cbm":null,"qty":120.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139314_5_-2803444424175759370","item":"SPOT-CL86-4","desc":"#3810 SPOT CONTAINER WITH LID 86OZ 5LB CRC KOSHER 12/4 PACK","cost":17.72,"cbm":null,"qty":120.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139314_5_-3543209582838899426","item":"SPOT-CL86-8","desc":"#7953 SPOT CONTAINER WITH LID 64OZ 5LB CRC KOSHER 8/8 PACK","cost":26.67,"cbm":null,"qty":180.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_138909_6","container":"PO-138909","carrier":"","status":"transit","eta":"2026-08-18","etd":"2026-02-18","vendor":"DIRECT LINK USA LLC","po":"138909","pol":"","pod":"","containerCbm":68,"shippingCost":6800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $31,212.50 | 8 items | 5425 units","addedAt":"2026-07-28T20:34:33.975913","items":[{"id":"item_138909_6_-2191522303671242526","item":"CV-SHB500","desc":"SOUP SPOONS EXTRA HEAVY BLACK /500","cost":4.62,"cbm":null,"qty":850.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_558122090788886355","item":"CV-FH500","desc":"FORKS EXTRA HEAVY WHITE /500","cost":4.63,"cbm":null,"qty":1300.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_2856154030704201180","item":"PLP-CO16","desc":"PLASTIC CLEAR DELI CONTAINER'S 16OZ /500","cost":15.45,"cbm":null,"qty":50.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_-7402400527495026415","item":"PLP-COL","desc":"LIDS FOR 8OZ/16OZ/32OZ CONTAINER /500","cost":9.28,"cbm":null,"qty":75.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_1771114602653766819","item":"SPOT-TH200","desc":"#3663 SPOT TEA SPOON KFP 6/200","cost":11.9,"cbm":null,"qty":250.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_-7207532260781481482","item":"PLP-CU3","desc":"CLEAR PLASTIC CUPS 3.5OZ 50X50 /2500","cost":20.43,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_-5989836563173646690","item":"SPOT-S1000","desc":"SPOT SOUP SPOON MEDIUM WEIGHT KFP /1000","cost":2.85,"cbm":null,"qty":2000.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_138909_6_6289658351384504342","item":"SPOT-F1000","desc":"SPOT FORK MEDIUM WEIGHT KFP WHITE /1000","cost":2.85,"cbm":null,"qty":800.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139315_7","container":"PO-139315","carrier":"","status":"transit","eta":"2026-08-24","etd":"2026-04-28","vendor":"DIRECT LINK USA LLC","po":"139315","pol":"","pod":"","containerCbm":68,"shippingCost":6200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $38,364.65 | 8 items | 5089 units","addedAt":"2026-07-28T20:34:33.975932","items":[{"id":"item_139315_7_4650215332005915465","item":"SPOT-SC4850","desc":"#3747 SPOT EXTRA HEAVY WEIGHT CLEAR SOUP SPOONS 48/50CT.","cost":29.37,"cbm":null,"qty":130.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_5749599642568489987","item":"SPOT-FC4850","desc":"#3749 SPOT EXTRA HEAVY WEIGHT CLEAR FORKS 48/50CT.","cost":28.36,"cbm":null,"qty":130.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_-2228528580485962334","item":"SPOT-KC4850","desc":"#3751 SPOT EXTRA HEAVY WEIGHT CLEAR KNIVES 48/50CT.","cost":29.0,"cbm":null,"qty":130.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_-2129835017768569807","item":"SPOT-FH200","desc":"#3661 SPOT FORKS KFP 6/200","cost":13.93,"cbm":null,"qty":180.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_1771114602653766819","item":"SPOT-TH200","desc":"#3663 SPOT TEA SPOON KFP 6/200","cost":13.86,"cbm":null,"qty":180.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_6289658351384504342","item":"SPOT-F1000","desc":"SPOT FORK MEDIUM WEIGHT KFP WHITE /1000","cost":3.45,"cbm":null,"qty":2689.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_876767443158951697","item":"SPOT-K1000","desc":"SPOT KNIVES MEDIUM WEIGHT KFP WHITE /1000","cost":3.45,"cbm":null,"qty":1500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139315_7_798385972325143521","item":"PLP-FH1000","desc":"#4022 FORKS EXTRA HEAVY WHITE /1000","cost":9.57,"cbm":null,"qty":150.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139319_8","container":"PO-139319","carrier":"","status":"transit","eta":"2026-08-07","etd":"2026-04-28","vendor":"DONGGUAN XIANGSHENG HOUSEHOLD PRODUCTS","po":"139319","pol":"","pod":"","containerCbm":68,"shippingCost":8000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $19,888.50 | 2 items | 1970 units","addedAt":"2026-07-28T20:34:33.975944","items":[{"id":"item_139319_8_2583901497624543556","item":"SPOT-130","desc":"#3139 FACIAL TISSUES 30/130","cost":5.75,"cbm":null,"qty":950.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139319_8_-3414696868973354287","item":"SOFFY-130","desc":"FACIAL TISSUES 30/130","cost":6.3,"cbm":null,"qty":1020.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139320_9","container":"PO-139320","carrier":"","status":"transit","eta":"2026-08-12","etd":"2026-04-28","vendor":"DONGGUAN XIANGSHENG HOUSEHOLD PRODUCTS","po":"139320","pol":"","pod":"","containerCbm":68,"shippingCost":8000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $19,048.76 | 3 items | 1171 units","addedAt":"2026-07-28T20:34:33.975956","items":[{"id":"item_139320_9_-2083158969576970396","item":"SOFFY-230M","desc":"#3911 MADANIM FACIAL TISSUE 24/230","cost":8.88,"cbm":null,"qty":362.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139320_9_-7079877827560636138","item":"SPOT-6230","desc":"#3756 FACIAL TISSUES SHRINK FILM 4X6PK /230","cost":8.8,"cbm":null,"qty":159.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139320_9_6118443508956313340","item":"SPOT-LN500","desc":"#7870 SPOT LUNCH NAPKINS CRC KOSHER KFP 12X10'' 12/500","cost":9.9,"cbm":null,"qty":650.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139487_10","container":"PO-139487","carrier":"","status":"transit","eta":"2026-09-10","etd":"2026-05-26","vendor":"DONGGUAN XIANGSHENG HOUSEHOLD PRODUCTS","po":"139487","pol":"","pod":"","containerCbm":68,"shippingCost":8400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $20,590.44 | 3 items | 1675 units","addedAt":"2026-07-28T20:34:33.975967","items":[{"id":"item_139487_10_-3414696868973354287","item":"SOFFY-130","desc":"FACIAL TISSUES 30/130","cost":5.75,"cbm":null,"qty":1068.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139487_10_1758021376600474728","item":"SOFFY-260","desc":"FACIAL TISSUE 24/260","cost":9.84,"cbm":null,"qty":541.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139487_10_6646747164303566809","item":"SOFFY-10220","desc":"#7888 FACIAL TISSUE 3 PACKS 10/220","cost":11.0,"cbm":null,"qty":66.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139359_11","container":"PO-139359","carrier":"","status":"transit","eta":"2026-09-01","etd":"2026-05-05","vendor":"DUCON PACKAGING LLC","po":"139359","pol":"","pod":"","containerCbm":68,"shippingCost":11500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $35,255.40 | 8 items | 1633 units","addedAt":"2026-07-28T20:34:33.975986","items":[{"id":"item_139359_11_9061314905151929895","item":"SPOT-54PL","desc":"#3829 SPOT 5 LB. OBLONG PAN W/ FOIL LIDS CRC KOSHER /4PK CS/16","cost":15.38,"cbm":null,"qty":290.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_-8851455161465673627","item":"SPOT-FS50","desc":"#3234 SPOT FULL SIZE SHALLOW ALUMINUM PAN /50 (CRC KOSHER)","cost":22.2,"cbm":null,"qty":45.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_-8519779615827033769","item":"SPOT-913M","desc":"#3233 SPOT HALF SIZE MEDIUM PAN OU KOSHER /100 (CRC KOSHER)","cost":13.3,"cbm":null,"qty":200.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_5229881817695968286","item":"CV-5810PL","desc":"#6866 CENTRAL VALUE 5LB. OBLONG PANS W/ FOIL LIDS  /10PK CS/8","cost":17.49,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_-6109666967290398208","item":"CV-5820PL","desc":"#6873 CENTRAL VALUE 5LB. OBLONG PANS W/ FOIL LIDS  /20PK CS/8","cost":33.81,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_-3606935555620521562","item":"CV-88PL10","desc":"#6958 CENTRAL VALUE ALUMINUM PAN AND LID COMBO /8X8 /10/10","cost":12.81,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_5608701357706487127","item":"PAN-FSLID","desc":"#7878 PAN PRO FULL SIZE LIDS /50 (CRC KOSHER)","cost":9.8,"cbm":null,"qty":478.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139359_11_4921225863083081703","item":"PAN-913","desc":"#7968 PANPRO 9X13 HALF SIZE DEEP PAN /100 CRC KOSHER","cost":14.19,"cbm":null,"qty":320.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139360_12","container":"PO-139360","carrier":"","status":"transit","eta":"2026-09-01","etd":"2026-05-05","vendor":"DUCON PACKAGING LLC","po":"139360","pol":"","pod":"","containerCbm":68,"shippingCost":11500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $38,171.74 | 3 items | 1546 units","addedAt":"2026-07-28T20:34:33.975999","items":[{"id":"item_139360_12_-4129005504471272326","item":"SPOT-210PL","desc":"#3827 SPOT 2 1/4 LB. OBLONG PANS W/ FOIL LIDS /10PK CS/24 CRC KOSHER","cost":29.09,"cbm":null,"qty":360.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139360_12_4921225863083081703","item":"PAN-913","desc":"#7968 PANPRO 9X13 HALF SIZE DEEP PAN /100 CRC KOSHER","cost":14.19,"cbm":null,"qty":886.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139360_12_7636277450099887972","item":"CV-88PL20","desc":"#6965 CENTRAL VALUE ALUMINUM PAN AND LID COMBO /8X8 /5/20","cost":12.09,"cbm":null,"qty":300.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139361_13","container":"PO-139361","carrier":"","status":"transit","eta":"2026-09-20","etd":"2026-05-05","vendor":"DUCON PACKAGING LLC","po":"139361","pol":"","pod":"","containerCbm":68,"shippingCost":8800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $42,320.55 | 3 items | 1532 units","addedAt":"2026-07-28T20:34:33.976010","items":[{"id":"item_139361_13_-8519779615827033769","item":"SPOT-913M","desc":"#3233 SPOT HALF SIZE MEDIUM PAN OU KOSHER /100 (CRC KOSHER)","cost":13.3,"cbm":null,"qty":355.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139361_13_-991279456457260907","item":"SPOT-913EXD","desc":"#3821 SPOT 9X13 HALF SIZE PAN EXTRA DEEP CRC KOSHER /100","cost":25.22,"cbm":null,"qty":350.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139361_13_-7281700718494937367","item":"SPOT-FMXH","desc":"#3237 SPOT FULL SIZE MEDIUM EXTRA HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":24.15,"cbm":null,"qty":827.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139375_14","container":"PO-139375","carrier":"","status":"transit","eta":"2026-09-19","etd":"2026-05-06","vendor":"DUCON PACKAGING LLC","po":"139375","pol":"","pod":"","containerCbm":68,"shippingCost":11400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $40,998.17 | 6 items | 1011 units","addedAt":"2026-07-28T20:34:33.976024","items":[{"id":"item_139375_14_-5907302028677643633","item":"CV-88913PL10","desc":"#3697 ALUMINUM PANS W/LID 10PK /8X8 W/9X13 /CS/8","cost":36.57,"cbm":null,"qty":265.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139375_14_-4129005504471272326","item":"SPOT-210PL","desc":"#3827 SPOT 2 1/4 LB. OBLONG PANS W/ FOIL LIDS /10PK CS/24 CRC KOSHER","cost":29.09,"cbm":null,"qty":90.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139375_14_5608701357706487127","item":"PAN-FSLID","desc":"#7878 PAN PRO FULL SIZE LIDS /50 (CRC KOSHER)","cost":9.8,"cbm":null,"qty":42.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139375_14_4921225863083081703","item":"PAN-913","desc":"#7968 PANPRO 9X13 HALF SIZE DEEP PAN /100 CRC KOSHER","cost":16.48,"cbm":null,"qty":220.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139375_14_3081586815663662129","item":"SPOT-FEXD","desc":"#7893 SPOT FULL SIZE EXTRA DEEP HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":32.53,"cbm":null,"qty":94.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139375_14_5181617759497872189","item":"SPOT-10LB","desc":"#3244 SPOT 10 LB. ROASTER PAN CRC KOSHER /100","cost":33.98,"cbm":null,"qty":300.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139658_15","container":"PO-139658","carrier":"","status":"transit","eta":"2026-09-20","etd":"2026-06-18","vendor":"DUCON PACKAGING LLC","po":"139658","pol":"","pod":"","containerCbm":68,"shippingCost":8800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $39,190.27 | 5 items | 1565 units","addedAt":"2026-07-28T20:34:33.976040","items":[{"id":"item_139658_15_744732960744102194","item":"SPOT-913","desc":"#3239 SPOT 9X13 HALF SIZE DEEP PAN /100 CRC KOSHER","cost":14.19,"cbm":null,"qty":418.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139658_15_7769357589328750708","item":"SPOT-FDH","desc":"#3928 SPOT FULL SIZE DEEP EXTRA HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":25.25,"cbm":null,"qty":83.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139658_15_-8519779615827033769","item":"SPOT-913M","desc":"#3233 SPOT HALF SIZE MEDIUM PAN OU KOSHER /100 (CRC KOSHER)","cost":13.3,"cbm":null,"qty":411.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139658_15_-8851455161465673627","item":"SPOT-FS50","desc":"#3234 SPOT FULL SIZE SHALLOW ALUMINUM PAN /50 (CRC KOSHER)","cost":22.2,"cbm":null,"qty":543.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139658_15_2503080467858777562","item":"SPOT-88-5","desc":"#3884 8X8 ALUMINUM PAN CRC KOSHER  100/5 PACK","cost":44.02,"cbm":null,"qty":110.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139659_16","container":"PO-139659","carrier":"","status":"transit","eta":"2026-09-20","etd":"2026-06-18","vendor":"DUCON PACKAGING LLC","po":"139659","pol":"","pod":"","containerCbm":68,"shippingCost":8800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $37,907.17 | 3 items | 1527 units","addedAt":"2026-07-28T20:34:33.976051","items":[{"id":"item_139659_16_-6688929168100023086","item":"PAN-FMH","desc":"#7688 PANPRO FULL SIZE MEDIUM HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":20.9,"cbm":null,"qty":470.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139659_16_-7073404325213287579","item":"SPOT-09","desc":"#3243 SPOT PAN 9'' ROUND /500 CRC KOSHER","cost":31.97,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139659_16_8800457542738351503","item":"SPOT-913XH","desc":"#3242 SPOT 9X13 HALF SIZE DEEP PAN EXTRA HEAVY /100 (CRC KOSHER)","cost":16.81,"cbm":null,"qty":957.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139660_17","container":"PO-139660","carrier":"","status":"transit","eta":"2026-09-20","etd":"2026-06-18","vendor":"DUCON PACKAGING LLC","po":"139660","pol":"","pod":"","containerCbm":68,"shippingCost":8800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $41,828.20 | 2 items | 1408 units","addedAt":"2026-07-28T20:34:33.976061","items":[{"id":"item_139660_17_-7281700718494937367","item":"SPOT-FMXH","desc":"#3237 SPOT FULL SIZE MEDIUM EXTRA HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":24.15,"cbm":null,"qty":1108.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139660_17_-6688929168100023086","item":"PAN-FMH","desc":"#7688 PANPRO FULL SIZE MEDIUM HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":20.9,"cbm":null,"qty":300.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139661_18","container":"PO-139661","carrier":"","status":"transit","eta":"2026-07-30","etd":"2026-06-18","vendor":"DUCON PACKAGING LLC","po":"139661","pol":"","pod":"","containerCbm":68,"shippingCost":11400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $41,075.27 | 6 items | 1036 units","addedAt":"2026-07-28T20:34:33.976077","items":[{"id":"item_139661_18_-7281700718494937367","item":"SPOT-FMXH","desc":"#3237 SPOT FULL SIZE MEDIUM EXTRA HEAVY ALUMINUM PAN /50 (CRC KOSHER)","cost":24.15,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139661_18_-8851455161465673627","item":"SPOT-FS50","desc":"#3234 SPOT FULL SIZE SHALLOW ALUMINUM PAN /50 (CRC KOSHER)","cost":22.2,"cbm":null,"qty":21.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139661_18_2503080467858777562","item":"SPOT-88-5","desc":"#3884 8X8 ALUMINUM PAN CRC KOSHER  100/5 PACK","cost":44.02,"cbm":null,"qty":40.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139661_18_9061314905151929895","item":"SPOT-54PL","desc":"#3829 SPOT 5 LB. OBLONG PAN W/ FOIL LIDS CRC KOSHER /4PK CS/16","cost":15.38,"cbm":null,"qty":484.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139661_18_-1444772231541924515","item":"SPOT-5LB-25","desc":"#7781 SPOT 5LB OBLONG PAN FULL RIM CRC KOSHER 8/25PK","cost":39.62,"cbm":null,"qty":250.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139661_18_5160927748674751641","item":"SPOT-525PL","desc":"#7945  SPOT 5 LB. OBLONG PAN W/ FOIL LIDS CRC KOSHER 8/25PK","cost":41.98,"cbm":null,"qty":240.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139662_19","container":"PO-139662","carrier":"","status":"transit","eta":"2026-09-19","etd":"2026-06-18","vendor":"DUCON PACKAGING LLC","po":"139662","pol":"","pod":"","containerCbm":68,"shippingCost":11400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $44,273.98 | 4 items | 1461 units","addedAt":"2026-07-28T20:34:33.976091","items":[{"id":"item_139662_19_9061314905151929895","item":"SPOT-54PL","desc":"#3829 SPOT 5 LB. OBLONG PAN W/ FOIL LIDS CRC KOSHER /4PK CS/16","cost":15.38,"cbm":null,"qty":16.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139662_19_5160927748674751641","item":"SPOT-525PL","desc":"#7945  SPOT 5 LB. OBLONG PAN W/ FOIL LIDS CRC KOSHER 8/25PK","cost":41.98,"cbm":null,"qty":260.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139662_19_4921225863083081703","item":"PAN-913","desc":"#7968 PANPRO 9X13 HALF SIZE DEEP PAN /100 CRC KOSHER","cost":16.48,"cbm":null,"qty":915.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139662_19_-309286261430014309","item":"PAN-FS50","desc":"#8105 PANPRO FULL SIZE SHALLOW ALUMINUM PAN /50 (CRC KOSHER)","cost":24.57,"cbm":null,"qty":270.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_136308_20","container":"PO-136308","carrier":"","status":"delayed","eta":"2026-07-28","etd":"2025-01-03","vendor":"GOOD QUALITY","po":"136308","pol":"","pod":"","containerCbm":68,"shippingCost":0.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $10,784.21 | 80 items | 316 units","addedAt":"2026-07-28T20:34:33.976195","items":[{"id":"item_136308_20_5234047563217952360","item":"EMI-010-CL","desc":"10\" ROUND TRAY CLEAR (25)","cost":27.97,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8529168094159104405","item":"EMI-1014L","desc":"10 X 14 RECTANGULAR LID CLEAR (50)","cost":32.91,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-320354416540367938","item":"EMI-1116-BLK","desc":"11\" X 16\" OVAL TRAY BLACK (25)","cost":42.25,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-6337430534899824289","item":"EMI-1218-CL","desc":"12\" X 18\" RECTANGULAR TRAY CLEAR (20)","cost":42.99,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4952034501681424794","item":"EMI-1218L","desc":"12 X 18 RECTANGULAR LID CLEAR (40)","cost":36.49,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8211671093633604442","item":"EMI-204-BLK","desc":"PEDESTAL / DIP DISH BLACK (24)","cost":28.32,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_1487772676649637358","item":"EMI-204-CL","desc":"PEDESTAL / DIP DISH CLEAR (24)","cost":30.59,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3380848467622566344","item":"EMI-520","desc":"12\" ROUND DELI MAX BLACK /25","cost":22.22,"cbm":null,"qty":5.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3138236826355358454","item":"EMI-602-CL","desc":"NOTION MEDIUM 200 PACK","cost":69.02,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2976206471717049221","item":"EMI-608-CL","desc":"DUPLEX 200 PACK","cost":44.54,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3280682316405286815","item":"EMI-618-CL","desc":"ZEST SPOON 200 PACK","cost":19.63,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-7532513583486229873","item":"EMI-FBSC","desc":"PEDESTAL BOWL 40OZ CLEAR /12","cost":24.18,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8113114930774746132","item":"EMI-IB32C","desc":"32OZ. ICE BUCKET /12","cost":14.31,"cbm":null,"qty":14.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8866690005494944777","item":"EMI-MM2-CL","desc":"2OZ. MINI MARTINY 120 PACK","cost":22.88,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_9010001490199114653","item":"EMI-PT14C","desc":"14\" \"PRISM\" CRYSTAL TRAY, CLEAR 25 PACK","cost":43.405,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2779998984568015942","item":"EMI-SFC2","desc":"2 OZ MINI CHAMPAGNE FLUTE 12/8-96","cost":26.96,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8409078572371282780","item":"EMI-SM4-W","desc":"4OZ. SQUARE MUG 12/8","cost":56.86,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-7179386397536328145","item":"EMI-SM8-BO","desc":"SQUARE 8 OZ COFFEE MUGS BONE 96 PACK","cost":62.42,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-7456945000035629627","item":"EMI-ST8","desc":"8 OZ. EXTRA HEAVY WEIGHT SQUARE TUMBLER 168 PACK","cost":21.05,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_2249659989842817027","item":"FC-06744","desc":"SPARKLES SILVER SOUPSPOON 48/20","cost":55.0,"cbm":null,"qty":65.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_7666584255833933145","item":"FC-S6745","desc":"SILVER STERLING SPOON 28/25","cost":24.0,"cbm":null,"qty":57.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3379031015293225060","item":"FC-S6746","desc":"SILVER STERLING FORK 28/25","cost":24.0,"cbm":null,"qty":10.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8506411106265178218","item":"FL-106-BLK","desc":"WAVETRENDS 6.5\" DESSERT PLATES 10/12","cost":24.86,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-3371939543632830964","item":"FL-106-WH","desc":"WAVETRENDS 6.5\" DESSERT PLATES 10/12","cost":24.86,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-1916739470508992344","item":"FL-108-BLK","desc":"WAVETRENDS 8\" SALAD PLATES 10/12","cost":38.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_479989646721707658","item":"FL-109-WH","desc":"WAVETRENDS 9.5\" DINNER PLATES 10/12","cost":46.8,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_7530441686691750939","item":"FL-110-WH","desc":"WAVETRENDS 10.75\" DINNER PLATES 10/12","cost":87.83,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_6226198668871159208","item":"FL-1107-BO","desc":"WAVETRENDS 8 OZ. COFFEE MUG, BONE 8/12","cost":46.86,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2812794021484224158","item":"FL-1108","desc":"WAVETRENDS 8 OZ TUMBLERS 14/12","cost":19.49,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8646837878161676269","item":"FL-1209","desc":"WAVETRENDS 8 OZ. MARTINI GLASS 6/12","cost":46.9,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3707870436915968819","item":"FL-1309-BO","desc":"WAVETRENDS 9\" SAUCER WHITE 8/12","cost":42.23,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3912698928651365008","item":"FL-1309-CL","desc":"WAVETRENDS 9\" SAUCER CLEAR 8/12","cost":42.23,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-276009666144389904","item":"FL-1406CL","desc":"WAVETRENDS RECTANGULAR PLATES 6.5''X10'' CLEAR 12/10","cost":43.21,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_9217811033807844679","item":"FL-1606-BK","desc":"6.5\" SQUARE DESSERT PLATE BLACK 10/12","cost":20.22,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_4301724618350675932","item":"FL-180-L","desc":"FLAT LID FOR 8 OZ. BOWL PET /100","cost":11.76,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_2458087454758327440","item":"FL-205-BO","desc":"FLAIRWARE 5 OZ DESSERT BOWL, BONE 10/18","cost":25.75,"cbm":null,"qty":5.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-7238218431214214455","item":"FL-2202","desc":"FLAIRWARE 1 PIECE,2OZ, WINE GLASS, CLEAR 10/24","cost":26.38,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4702006906652771557","item":"FL-257-CL","desc":"FLAIRWARE 5\"X7\" SNACK TRAY, CLEAR 18/14","cost":41.0,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_1527691762774545708","item":"FL-3192FLS","desc":"92MM PET FLAT LID W/SLOT FITS 9 OZ. SQUAT & 12 OZ. DRINKING CUPS 10/100","cost":30.0,"cbm":null,"qty":5.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2876394170234626977","item":"FL-409","desc":"SAVVI SERVE 9 OZ. OLD-FASHIONED TUMBLER, CLEAR 20/25","cost":24.03,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2682321808435959123","item":"FL-4101-YW","desc":"QUENCHERS 7 OZ COCKTAIL SHAKER, YELLOW (24)","cost":20.8,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8388305463108349331","item":"FL-4103-RD","desc":"QUENCHERS 14 OZ COCKTAIL SHAKER, RED (24)","cost":27.98,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3669789895082141390","item":"FL-42SB24","desc":"7\" 24 OZ. SQUARE BOWL TAN /300","cost":38.99,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-3234727387614661174","item":"FL-42SP08","desc":"8 SQUARE CONSERVEWARE PLATES /500","cost":50.0,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-2780368699029567116","item":"FL-42SP10","desc":"10 SQUARE CONSERVEWARE PLATES /250","cost":38.71,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-6222147527834554607","item":"FL-506-BKG","desc":"6\" SILVER SPLENDOR DINNER PLATES BLACK/GOLD  10/15","cost":20.5,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8854363360467011988","item":"FL-508-BO","desc":"8OZ COFFEE MUG 12/10","cost":66.48,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8409153071836409441","item":"FL-5507-WH-BG","desc":"7.25\" SQUARE DESSERT PLATE COBALT BLUE  10/12","cost":35.0,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-8369864151205253726","item":"FL-5510-WH-BG","desc":"10\" SQUARE DINNER PLATE COBALT BLUE 10/12","cost":55.0,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_4086718027747840132","item":"FL-6077","desc":"SILVER SECRETS 24 COUNT KNIVES 24/24","cost":15.6,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-919683494009601416","item":"FL-9209-L","desc":"9209-L 9\" DOME LID PET- 2.5\" (120)","cost":29.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_7524663184802658511","item":"FL-B6200-CL","desc":"3''X3'' MINI CLEAR PLATES /200","cost":17.32,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3674312337483907824","item":"FL-B6201-CL","desc":"TINY TRAYS 2X2'' BULK PACKED /200","cost":16.45,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_6729292217763221658","item":"KAYA-6905","desc":"5OZ. SQUARE BLACK DESSERT BOWLS 10/12","cost":22.95,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4625138288464220990","item":"KAYA-6908","desc":"8\" SQUARE BLACK PLATES 10/12","cost":28.8,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_7529654513811637811","item":"KAYA-6909","desc":"9.5\" BLACK SQUARE PLATES 10/12-120","cost":40.0,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4462884684644342012","item":"KAYA-6917","desc":"SQUARE SERVING BOWL 96OZ  WHITE /25","cost":21.95,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_4114563858049694677","item":"KAYA-6930","desc":"10.75\" SQUARE BONE PLATES 10/12","cost":52.5,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_2181074411716249791","item":"KAYA-6931","desc":"12OZ. SQUARE BONE BOWLS 10/12","cost":41.95,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_1020291100736909460","item":"KAYA-6936","desc":"6.5\" SQUARE BONE PLATES 10/12","cost":19.5,"cbm":null,"qty":8.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_4659917336853906086","item":"KAYA-6938","desc":"8\" SQUARE BONE PLATES 10/12","cost":28.5,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_1021984933476042188","item":"KAYA-6946","desc":"6.5\" SQUARE SILVER PLATES 10/12","cost":19.5,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-6432230639007574139","item":"KAYA-6948","desc":"8\" SQUARE SILVER PLATES 10/12","cost":28.8,"cbm":null,"qty":12.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8803790195702713722","item":"KAYA-6951","desc":"KAYA 2 OZ. SQ WHISKEY CRYSTAL  48/20","cost":39.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-5708444710952205708","item":"KC-1003","desc":"MW BERRY BOWL WHITE 24/12","cost":25.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-6910450962745614356","item":"KC-1078","desc":"SENSATIONS SQUARE IVORY B&B PLATES 9.5'' 12/10CT","cost":40.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8724341886645904860","item":"KC-1363","desc":"LACE WHITE /SILVER 6'' PLATES 12/10CT.","cost":21.6,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_3976360627625872281","item":"KC-1365","desc":"LACE WHITE /SILVER 9'' PLATES 12/10CT.","cost":36.0,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_2520520353255536992","item":"KC-1366","desc":"LACE WHITE /SILVER 10.25'''' PLATES 12/10CT.","cost":45.0,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-1078935546886489920","item":"KC-1368","desc":"LACE IVORY/GOLD 6'' PLATES 12/10CT.","cost":21.6,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-5761302052644513436","item":"KC-1371","desc":"LACE IVORY/GOLD 10.25'' PLATES 12/10CT","cost":45.0,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-6500515382174043035","item":"KC-1461","desc":"PARTY ESSENTIALS 5\"X7\" CLEAR PLATES 24/10CT","cost":32.4,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-9065969365897609831","item":"KC-151","desc":"TEA SPOONS WHITE 50/48","cost":16.2,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_8355216110461437194","item":"KC-155","desc":"KNIVES WHITE 100/24","cost":15.9,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_7381960582454654361","item":"KC-1766","desc":"MINI-WARE OVAL DISH WITH STEM 24/8CT","cost":45.0,"cbm":null,"qty":4.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_5874462581380754577","item":"KC-862","desc":"13.5'' SILVEREDGE WHITE RECTANGULAR PLATE 12/10","cost":66.0,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-3353477925231651113","item":"KC-962","desc":"MINIWHERE CRESCENT SPOON WHITE 20/24","cost":27.6,"cbm":null,"qty":1.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4859672646405069529","item":"KC-972","desc":"2OZ SQUARE BOWL CLEAR 24/12","cost":23.4,"cbm":null,"qty":2.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_1349555625968182348","item":"KCH-LSSQ-B12-W","desc":"SQUARETE 12OZ SQUARE WHITE SOUP BOWLS 12/1","cost":37.0,"cbm":null,"qty":3.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_136308_20_-4894244834062834889","item":"KCH-LSSQ-P8-B","desc":"SQUARETE 8\" SQUARE BLACK APPETIZER PLATES 12/10","cost":27.0,"cbm":null,"qty":10.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139494_21","container":"PO-139494","carrier":"","status":"transit","eta":"2026-08-29","etd":"2026-05-26","vendor":"GREEN PAPER INDUSTRIAL CO.,LTD","po":"139494","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $27,611.40 | 3 items | 2107 units","addedAt":"2026-07-28T20:34:33.976217","items":[{"id":"item_139494_21_6809700872030682665","item":"SOFFY-CD8","desc":"#3717 8\" WHITE ROLL TAD TOWEL 8''X 550 FT 6/ROLLS","cost":16.4,"cbm":null,"qty":350.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139494_21_-6173786067960881852","item":"SPOT-PT100","desc":"SPOT SHABBOS CUT FOLDED 9X10 PAPER TOWEL IN BOX DISPENSER CRC KOSHER 12/80","cost":6.8,"cbm":null,"qty":1250.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139494_21_-356046462040292385","item":"SPOT-PT125","desc":"SPOT SHABBOS CUT FOLDED 9X10 PAPER TOWEL IN BOX DISPENSER CRC KOSHER 12/125","cost":10.2,"cbm":null,"qty":507.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139495_22","container":"PO-139495","carrier":"","status":"transit","eta":"2026-09-10","etd":"2026-05-26","vendor":"GREEN PAPER INDUSTRIAL CO.,LTD","po":"139495","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $19,150.00 | 2 items | 1288 units","addedAt":"2026-07-28T20:34:33.976232","items":[{"id":"item_139495_22_4763337149547281444","item":"SOFFY-9JRT","desc":"#3737 9\" 2-PLY ROLL TISSUES 12/500","cost":7.5,"cbm":null,"qty":1088.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139495_22_-5709788719966992226","item":"SPOT-TSCR20250","desc":"#7980 TOILET SEAT COVERS 20/250","cost":13.95,"cbm":null,"qty":200.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139405_23","container":"PO-139405","carrier":"","status":"transit","eta":"2026-08-10","etd":"2026-05-12","vendor":"JOYLIFE TISSUE PAPER FACTORY","po":"139405","pol":"","pod":"","containerCbm":68,"shippingCost":5600.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $20,320.00 | 1 items | 1150 units","addedAt":"2026-07-28T20:34:33.976245","items":[{"id":"item_139405_23_468757995458677163","item":"SOFFY-10230R","desc":"ROCKLAND FACIAL TISSUE 3 PACKS 10/230","cost":12.8,"cbm":null,"qty":1150.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139496_24","container":"PO-139496","carrier":"","status":"transit","eta":"2026-08-29","etd":"2026-05-26","vendor":"JOYLIFE TISSUE PAPER FACTORY","po":"139496","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $23,073.60 | 2 items | 1162 units","addedAt":"2026-07-28T20:34:33.976262","items":[{"id":"item_139496_24_3353181173232759432","item":"SOFFY-10230","desc":"FACIAL TISSUE 3 PACKS 10/230","cost":12.8,"cbm":null,"qty":801.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139496_24_-3832887006770314928","item":"SOFFY-10230H","desc":"HATZLACHA FACIAL TISSUES 3 PACKS 10/230","cost":12.8,"cbm":null,"qty":361.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139463_25","container":"PO-139463","carrier":"","status":"transit","eta":"2026-09-10","etd":"2026-05-20","vendor":"MEGALL PAPER QINGDAO","po":"139463","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $28,598.00 | 1 items | 1457 units","addedAt":"2026-07-28T20:34:33.976275","items":[{"id":"item_139463_25_-3664507026388947041","item":"SOFFY-400","desc":"#7955 SOFFY INTERFOLD BATHROOM TISSUE  60/400","cost":14.0,"cbm":null,"qty":1457.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139551_26","container":"PO-139551","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-04","vendor":"POLICAP PLASTIC SAN VE TIC LTD STI","po":"139551","pol":"","pod":"","containerCbm":68,"shippingCost":2000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $39,345.36 | 2 items | 3561 units","addedAt":"2026-07-28T20:34:33.976291","items":[{"id":"item_139551_26_97168590626908525","item":"PLATE-12","desc":"#7713 PLATEPRO 12OZ.PLASTIC BOWLS 8/100","cost":11.76,"cbm":null,"qty":986.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139551_26_-1191229263978276911","item":"PLATE-9","desc":"#7719 PLATEPRO 9\" PLASTIC PLATES CRC KOSHER 4/100","cost":10.0,"cbm":null,"qty":2575.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139563_27","container":"PO-139563","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-08","vendor":"POLICAP PLASTIC SAN VE TIC LTD STI","po":"139563","pol":"","pod":"","containerCbm":68,"shippingCost":2000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $38,864.80 | 3 items | 3767 units","addedAt":"2026-07-28T20:34:33.976307","items":[{"id":"item_139563_27_97168590626908525","item":"PLATE-12","desc":"#7713 PLATEPRO 12OZ.PLASTIC BOWLS 8/100","cost":11.76,"cbm":null,"qty":1050.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139563_27_5521284785556168714","item":"PLATE-5","desc":"#7711 PLATEPRO 5OZ PLASTIC BOWLS 8/100","cost":7.36,"cbm":null,"qty":1005.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139563_27_-1191229263978276911","item":"PLATE-9","desc":"#7719 PLATEPRO 9\" PLASTIC PLATES CRC KOSHER 4/100","cost":10.0,"cbm":null,"qty":1712.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139564_28","container":"PO-139564","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-08","vendor":"POLICAP PLASTIC SAN VE TIC LTD STI","po":"139564","pol":"","pod":"","containerCbm":68,"shippingCost":2000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $39,713.04 | 3 items | 3708 units","addedAt":"2026-07-28T20:34:33.976328","items":[{"id":"item_139564_28_6121003604421203329","item":"PLATE-6","desc":"#7715 PLATEPRO 6'' PLASTIC PLATES 8/100","cost":8.64,"cbm":null,"qty":839.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139564_28_97168590626908525","item":"PLATE-12","desc":"#7713 PLATEPRO 12OZ.PLASTIC BOWLS 8/100","cost":11.76,"cbm":null,"qty":1008.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139564_28_-1191229263978276911","item":"PLATE-9","desc":"#7719 PLATEPRO 9\" PLASTIC PLATES CRC KOSHER 4/100","cost":10.0,"cbm":null,"qty":1861.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139567_29","container":"PO-139567","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-08","vendor":"POLICAP PLASTIC SAN VE TIC LTD STI","po":"139567","pol":"","pod":"","containerCbm":68,"shippingCost":2000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $39,406.00 | 3 items | 3723 units","addedAt":"2026-07-28T20:34:33.976350","items":[{"id":"item_139567_29_97168590626908525","item":"PLATE-12","desc":"#7713 PLATEPRO 12OZ.PLASTIC BOWLS 8/100","cost":11.76,"cbm":null,"qty":850.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139567_29_5521284785556168714","item":"PLATE-5","desc":"#7711 PLATEPRO 5OZ PLASTIC BOWLS 8/100","cost":7.36,"cbm":null,"qty":500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139567_29_-1191229263978276911","item":"PLATE-9","desc":"#7719 PLATEPRO 9\" PLASTIC PLATES CRC KOSHER 4/100","cost":10.0,"cbm":null,"qty":2373.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139568_30","container":"PO-139568","carrier":"","status":"transit","eta":"2026-08-09","etd":"2026-06-08","vendor":"POLICAP PLASTIC SAN VE TIC LTD STI","po":"139568","pol":"","pod":"","containerCbm":68,"shippingCost":2000.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $39,659.52 | 2 items | 3616 units","addedAt":"2026-07-28T20:34:33.976368","items":[{"id":"item_139568_30_97168590626908525","item":"PLATE-12","desc":"#7713 PLATEPRO 12OZ.PLASTIC BOWLS 8/100","cost":11.76,"cbm":null,"qty":852.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139568_30_-1191229263978276911","item":"PLATE-9","desc":"#7719 PLATEPRO 9\" PLASTIC PLATES CRC KOSHER 4/100","cost":10.0,"cbm":null,"qty":2764.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139367_31","container":"PO-139367","carrier":"","status":"transit","eta":"2026-09-08","etd":"2026-05-05","vendor":"PURCHASING 411 INC","po":"139367","pol":"","pod":"","containerCbm":68,"shippingCost":0.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $12,780.00 | 1 items | 600 units","addedAt":"2026-07-28T20:34:33.976385","items":[{"id":"item_139367_31_4456197749822312622","item":"SOFFY-BT96","desc":"#3725 2 PLY ROLL BATH TISSUE 96/400 SHEETS","cost":21.3,"cbm":null,"qty":600.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139581_32","container":"PO-139581","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-09","vendor":"SEPAR PLASTIK SAN VE TIC AS","po":"139581","pol":"","pod":"","containerCbm":68,"shippingCost":3800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $16,295.17 | 1 items | 2371 units","addedAt":"2026-07-28T20:34:33.976444","items":[{"id":"item_139581_32_-7853058849453386688","item":"CUP-C7","desc":"CUPSPRO PLASTIC CUPS CRC KOSHER /7OZ /10/100","cost":5.27,"cbm":null,"qty":2371.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139582_33","container":"PO-139582","carrier":"","status":"transit","eta":"2026-08-16","etd":"2026-06-09","vendor":"SEPAR PLASTIK SAN VE TIC AS","po":"139582","pol":"","pod":"","containerCbm":68,"shippingCost":3800.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $17,412.41 | 1 items | 2583 units","addedAt":"2026-07-28T20:34:33.976465","items":[{"id":"item_139582_33_-7853058849453386688","item":"CUP-C7","desc":"CUPSPRO PLASTIC CUPS CRC KOSHER /7OZ /10/100","cost":5.27,"cbm":null,"qty":2583.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139370_34","container":"PO-139370","carrier":"","status":"transit","eta":"2026-08-20","etd":"2026-05-05","vendor":"SHANGHAI SETBEST PRODUCTS CO.,LTD","po":"139370","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $35,238.80 | 9 items | 5634 units","addedAt":"2026-07-28T20:34:33.976500","items":[{"id":"item_139370_34_-3508944052087485468","item":"SPOT-DPL","desc":"#3940 LOBBY DUST PAN /1","cost":2.9,"cbm":null,"qty":1000.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_5026290027960130665","item":"SPOT-1050","desc":"JANITOR CART 3 SHELVES, 25 GALLON ZIPPERED YELLOW VINYL BAG","cost":26.4,"cbm":null,"qty":30.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_-5184137332805879247","item":"SPOT-4050","desc":"ANGLE BROOM LARGE /1","cost":1.3,"cbm":null,"qty":1500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_-5696320123541114428","item":"SPOT-SCRUBS","desc":"#3946 STAINLESS STEEL SCRUBBER 35 GR. 6/12","cost":8.64,"cbm":null,"qty":1000.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_3415599850906571357","item":"SPOT-MBQ35","desc":"#3931 35 QT YELLOW MOP BUCKET & SIDE WRINGER COMBO","cost":19.8,"cbm":null,"qty":264.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_6943846010566217796","item":"SPOT-USCM","desc":"#3943 URINAL SCREEN CUCUMBER MELON /10PK","cost":7.8,"cbm":null,"qty":400.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_7515197416621366615","item":"SPOT-MSPG","desc":"#7981 MELAMINE SPONGES  4.5'' X 2.5'' X 1'' /24","cost":1.44,"cbm":null,"qty":840.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_4224134040269922834","item":"SPOT-WFS","desc":"Standard Wet Floor Sign (1)","cost":2.0,"cbm":null,"qty":500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139370_34_-5709788719966992226","item":"SPOT-TSCR20250","desc":"#7980 TOILET SEAT COVERS 20/250","cost":22.0,"cbm":null,"qty":100.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139347_35","container":"PO-139347","carrier":"","status":"transit","eta":"2026-08-10","etd":"2026-05-01","vendor":"SHANGHAI SILVER ENGINEER INDUSTRY CO LTD","po":"139347","pol":"","pod":"","containerCbm":68,"shippingCost":7500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $27,166.80 | 1 items | 607 units","addedAt":"2026-07-28T20:34:33.976514","items":[{"id":"item_139347_35_-5848626026282806880","item":"MG-WIRE36","desc":"#3442 MAXYGIFT FULL SIZE WIRE RACK /36","cost":32.4,"cbm":null,"qty":607.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139144_36","container":"PO-139144","carrier":"","status":"transit","eta":"2026-08-10","etd":"2026-03-24","vendor":"SUNFLY PAPER FACTORY","po":"139144","pol":"","pod":"","containerCbm":68,"shippingCost":7200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $22,555.36 | 2 items | 1924 units","addedAt":"2026-07-28T20:34:33.976532","items":[{"id":"item_139144_36_-3524726802826822672","item":"SOFFY-MFW-L","desc":"#7735 SOFFY WHITE MULTIFOLD 9\"X9\" PAPER TOWEL 12/334","cost":8.24,"cbm":null,"qty":500.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139144_36_-8575739527248086995","item":"SOFFY-MFK-L","desc":"#7736 MULTIFOLD KRAFT 9\"X9\" PAPER TOWEL 12/334","cost":7.89,"cbm":null,"qty":1424.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139273_37","container":"PO-139273","carrier":"","status":"transit","eta":"2026-08-10","etd":"2026-04-21","vendor":"SUNFLY PAPER FACTORY","po":"139273","pol":"","pod":"","containerCbm":68,"shippingCost":7500.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $22,271.68 | 1 items | 1744 units","addedAt":"2026-07-28T20:34:33.976545","items":[{"id":"item_139273_37_-8148499445553640306","item":"SOFFY-SF-L","desc":"#7802 SOFFY KRAFT SINGLEFOLD PAPER TOWEL 8.62 X 10.04  12/334","cost":8.47,"cbm":null,"qty":1744.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139318_38","container":"PO-139318","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-04-28","vendor":"SUNFLY PAPER FACTORY","po":"139318","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $22,946.27 | 1 items | 1741 units","addedAt":"2026-07-28T20:34:33.976562","items":[{"id":"item_139318_38_-8148499445553640306","item":"SOFFY-SF-L","desc":"#7802 SOFFY KRAFT SINGLEFOLD PAPER TOWEL 8.62 X 10.04  12/334","cost":8.47,"cbm":null,"qty":1741.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139331_39","container":"PO-139331","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-04-29","vendor":"SUNFLY PAPER FACTORY","po":"139331","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $24,238.32 | 3 items | 2173 units","addedAt":"2026-07-28T20:34:33.976583","items":[{"id":"item_139331_39_-2748209189865523650","item":"SOFFY-MFW","desc":"SOFFY WHITE MULTIFOLD PAPER TOWEL 12/334","cost":7.46,"cbm":null,"qty":754.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139331_39_-1066699737289653284","item":"SOFFY-MFK","desc":"#3728 MULTIFOLD KRAFT PAPER TOWEL 12/334","cost":7.16,"cbm":null,"qty":715.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139331_39_2155852452530415072","item":"SOFFY-CFW","desc":"WHITE C-FOLD PAPER TOWEL 12/200","cost":7.52,"cbm":null,"qty":704.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139332_40","container":"PO-139332","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-04-29","vendor":"SUNFLY PAPER FACTORY","po":"139332","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $23,224.44 | 1 items | 2014 units","addedAt":"2026-07-28T20:34:33.976598","items":[{"id":"item_139332_40_-2748209189865523650","item":"SOFFY-MFW","desc":"SOFFY WHITE MULTIFOLD PAPER TOWEL 12/334","cost":7.46,"cbm":null,"qty":2014.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139333_41","container":"PO-139333","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-04-29","vendor":"SUNFLY PAPER FACTORY","po":"139333","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $24,612.91 | 4 items | 1781 units","addedAt":"2026-07-28T20:34:33.976622","items":[{"id":"item_139333_41_2833636481489980632","item":"SOFFY-RK12350","desc":"#3835 8'' KRAFT ROLL TOWEL /12","cost":8.6,"cbm":null,"qty":437.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139333_41_-974171616521670925","item":"SOFFY-RW12350","desc":"#3841 8'' WHITE ROLL TOWEL /12","cost":8.82,"cbm":null,"qty":450.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139333_41_-8192966174960184664","item":"SOFFY-RK6800","desc":"#3711 8'' KRAFT ROLL TOWEL 6/","cost":9.59,"cbm":null,"qty":445.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139333_41_6599949001784855476","item":"SOFFY-RW6800","desc":"#3834 8'' WHITE ROLL TOWEL /6","cost":9.84,"cbm":null,"qty":449.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139596_42","container":"PO-139596","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-06-10","vendor":"UNITED WELL DEVELOPMENT LTD","po":"139596","pol":"","pod":"","containerCbm":68,"shippingCost":8200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $24,919.00 | 3 items | 696 units","addedAt":"2026-07-28T20:34:33.976659","items":[{"id":"item_139596_42_-4855194082049665251","item":"SPOT-CP64","desc":"#8021 SPOT CONTAINER PP 64OZ 4LB CRC KOSHER /200","cost":28.9,"cbm":null,"qty":178.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139596_42_2808264011675931402","item":"SPOT-CP86","desc":"#8020 SPOT 86OZ CONTAINER 5LB CRC KOSHER /200","cost":38.2,"cbm":null,"qty":170.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139596_42_2463861676992203958","item":"SPOT-LCP64/128","desc":"#8022 LIDS FOR 86OZ/64OZ/128OZ CONTAINER CRC KOSHER /200","cost":14.6,"cbm":null,"qty":348.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139344_43","container":"PO-139344","carrier":"","status":"delayed","eta":"2026-07-17","etd":"2026-04-30","vendor":"UPLASS AMBALAJ SAN. VE TIC. A.S.","po":"139344","pol":"","pod":"","containerCbm":68,"shippingCost":1200.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $45,530.20 | 3 items | 4353 units","addedAt":"2026-07-28T20:34:33.976687","items":[{"id":"item_139344_43_4605920584869986012","item":"PLP-7","desc":"PLASTIC PALACE 7'' PLASTIC PLATES 8/100","cost":11.8,"cbm":null,"qty":1063.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139344_43_1988447644527229752","item":"PLP-9","desc":"#3961 9\" PLASTIC PALACE PLASTIC PLATES CRC KOSHER 4/100","cost":10.416,"cbm":null,"qty":2840.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139344_43_3913658179881771247","item":"SPOT-5CR","desc":"#3635 5 OZ SPOT CLEAR PLASTIC BOWL 12/40","cost":4.9008,"cbm":null,"qty":450.0,"tariff":null,"labor":null,"shipManual":null}]},{"id":"po_139137_44","container":"PO-139137","carrier":"","status":"transit","eta":"2026-09-02","etd":"2026-03-23","vendor":"XTRA COMPANY LIMITED","po":"139137","pol":"","pod":"","containerCbm":68,"shippingCost":8400.0,"defaultTariff":0,"quoteMargin":0,"splitMethod":"cbm","notes":"Total: $25,730.45 | 4 items | 1587 units","addedAt":"2026-07-28T20:34:33.976709","items":[{"id":"item_139137_44_-6425263707271236115","item":"SPOT-C8","desc":"#3502 #3553 SPOT CONTAINER W/ LID /8OZ /10/21=210","cost":10.15,"cbm":null,"qty":358.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139137_44_-8030271982637483630","item":"SPOT-C81024","desc":"#3126 SPOT CONTAINER W/ LID /8OZ /10/24PK","cost":9.45,"cbm":null,"qty":460.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139137_44_-4021595333111777937","item":"SPOT-C161024","desc":"#3128 SPOT CONTAINER W/ LID /16OZ /10/24PK","cost":13.6,"cbm":null,"qty":380.0,"tariff":null,"labor":null,"shipManual":null},{"id":"item_139137_44_-7322386232826478505","item":"SPOT-C32","desc":"#3501 #3599 SPOT CONTAINER W/ LID /32OZ /10/12=120","cost":10.75,"cbm":null,"qty":389.0,"tariff":null,"labor":null,"shipManual":null}]}];
+      try{ localStorage.setItem(LS, JSON.stringify(shipments)); }catch(e){}
+    }
+  }catch(e){ shipments=[]; }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+const fmt$ = v => v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+(v||0).toFixed(0);
+const fmt4 = v => '$'+(v||0).toFixed(4);
+const mPill= m => m>=30?'mg':m>=20?'mm':'ml';
+
+function daysUntil(s){
+  if(!s) return null;
+  try{ return Math.round((new Date(s+'T00:00:00')-new Date())/864e5); }catch{ return null; }
+}
+function fmtDate(s){
+  if(!s) return '—';
+  try{ return new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch{ return s; }
+}
+function etaCls(s,status,pu){
+  if(status==='arrived') return 'green';
+  if(status==='scheduled'){
+    const d=daysUntil(pu);
+    if(d===null) return 'purple';
+    return d<0?'red':d<=7?'amber':'purple';
+  }
+  const d=daysUntil(s);
+  if(d===null) return '';
+  return d<0?'red':d<=14?'amber':'teal';
+}
+function etaLbl(s,status){
+  if(!s) return '—';
+  if(status==='arrived') return fmtDate(s)+' ✓';
+  const d=daysUntil(s);
+  if(d===null) return fmtDate(s);
+  if(d<0) return fmtDate(s)+' ('+Math.abs(d)+'d late)';
+  if(d===0) return 'Today!';
+  if(d===1) return 'Tomorrow';
+  return fmtDate(s)+' ('+d+'d)';
+}
+
+// ── Calculations ──────────────────────────────────────────────────────────
+function roundToNearest(price){
+  const floor=Math.floor(price), cents=price-floor;
+  return cents<=0.49?floor+0.49:floor+0.99;
+}
+
+function renderShipUnitCell(it, r, shipId){
+  if(it.shipManual!=null){
+    const escaped = String(it.shipManual).replace(/"/g,'&quot;');
+    return '<input class="editable smu-input" type="number" value="'+escaped+'" min="0" step="0.0001" '
+      +'data-shipid="'+shipId+'" data-itemid="'+it.id+'" '
+      +'style="border-color:var(--amber)" title="Manual ship/ctn override — clear to use auto CBM calc">';
+  }
+  // Show per-carton cost (what user thinks in)
+  const perCtn = r.shipPerCtn||0;
+  const val = perCtn>0 ? '$'+perCtn.toFixed(2)+'/ctn' : '—';
+  const perUnit = ''; // everything is per carton
+  return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'
+    +'<span style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--teal);font-weight:700">'+val+'</span>'
+    +'<span style="font-size:8px;color:var(--ink3)">'+perUnit+'</span>'
+    +'</div>';
+}
+
+function calcItem(it, ship){
+  const shipping  = parseFloat(ship.shippingCost)||0;
+  const contCbm   = parseFloat(ship.containerCbm)||68;
+  const splitMeth = ship.splitMethod||'cbm';
+  const defTariff = parseFloat(ship.defaultTariff)||0;
+  const margin    = parseFloat(ship.quoteMargin)||0;
+  const cost      = parseFloat(it.cost)||0;
+  const cbm       = it.cbm!=null ? parseFloat(it.cbm)||0 : null;
+  const qtyCtn    = it.qty!=null ? parseFloat(it.qty)||0 : null;
+  const tariffPct = it.tariff!=null ? parseFloat(it.tariff) : defTariff;
+
+  // Everything is per CARTON — cost, shipping, tariff, sell price
+  let shipPerCtn = 0;
+  if(it.shipManual!=null){
+    shipPerCtn = parseFloat(it.shipManual)||0;
+  } else if(shipping>0){
+    if(cbm!=null&&cbm>0){
+      shipPerCtn = (cbm/contCbm)*shipping;
+    } else if(splitMeth==='qty'){
+      // handled in calcAllItems
+    }
+  }
+
+  const tariffPerCtn = cost*(tariffPct/100);
+  const landedCost   = cost+shipPerCtn+tariffPerCtn;
+  const rawSell      = margin>0&&margin<100 ? landedCost/(1-margin/100) : landedCost;
+  const sellPrice    = margin>0 ? roundToNearest(rawSell) : rawSell;
+  const marginDollar = sellPrice-landedCost;
+  const marginPct    = sellPrice>0 ? marginDollar/sellPrice*100 : 0;
+
+  return{shipPerCtn,tariffPerCtn,landedCost,sellPrice,marginDollar,marginPct,tariffPct,cost};
+}
+
+function calcAllItems(ship){
+  const shipping = parseFloat(ship.shippingCost)||0;
+  const splitMeth= ship.splitMethod||'cbm';
+  // For qty-based fallback
+  // Qty-split: divide shipping equally among items with no CBM
+  const noQtyItems = (ship.items||[]).filter(i=>(i.cbm==null||parseFloat(i.cbm||0)===0)&&i.shipManual==null);
+  const noQtyCount = noQtyItems.length;
+  const qtyShipPCtn = shipping>0&&noQtyCount>0&&splitMeth==='qty' ? shipping/noQtyCount : 0;
+
+  return (ship.items||[]).map(it=>{
+    const r = calcItem(it, ship);
+    if(it.shipManual==null&&shipping>0&&(it.cbm==null||parseFloat(it.cbm||0)===0)&&splitMeth==='qty'){
+      r.shipPerCtn   = qtyShipPCtn;
+      r.landedCost   = r.cost+r.shipPerCtn+r.tariffPerCtn;
+      const margin   = parseFloat(ship.quoteMargin)||0;
+      const rawSell  = margin>0&&margin<100?r.landedCost/(1-margin/100):r.landedCost;
+      r.sellPrice    = margin>0?roundToNearest(rawSell):rawSell;
+      r.marginDollar = r.sellPrice-r.landedCost;
+      r.marginPct    = r.sellPrice>0?r.marginDollar/r.sellPrice*100:0;
+    }
+    return r;
+  });
+}
+
+// ── Header KPIs ───────────────────────────────────────────────────────────
+function updateKPIs(){
+  const transit  = shipments.filter(s=>s.status==='transit'||s.status==='customs').length;
+  const soon     = shipments.filter(s=>{ if(s.status==='arrived'||s.status==='ordered') return false; const d=daysUntil(s.eta); return d!==null&&d>=0&&d<=14; }).length;
+  const delayed  = shipments.filter(s=>{ if(s.status==='arrived'||s.status==='ordered') return false; return s.status==='delayed'||(daysUntil(s.eta)!==null&&daysUntil(s.eta)<0); }).length;
+  const totalVal = shipments.reduce((s,x)=>s+(parseFloat(x.shippingCost)||0)+((x.items||[]).reduce((a,i)=>a+(parseFloat(i.cost)||0),0)),0);
+  // Avg margin across all items
+  let totalSell=0,totalLanded=0;
+  shipments.forEach(ship=>{ calcAllItems(ship).forEach(r=>{ totalSell+=r.sellPrice; totalLanded+=r.landedCost; }); });
+  const avgMargin = totalSell>0?((totalSell-totalLanded)/totalSell*100).toFixed(0)+'%':'—';
+
+  document.getElementById('hk-total').textContent   = shipments.length;
+  document.getElementById('hk-transit').textContent = transit;
+  document.getElementById('hk-soon').textContent    = soon;
+  document.getElementById('hk-delayed').textContent = delayed;
+  document.getElementById('hk-value').textContent   = fmt$(totalVal);
+  document.getElementById('hk-margin').textContent  = avgMargin;
+}
+
+// ── Shipment list ─────────────────────────────────────────────────────────
+function setF(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on','green','red'));
+  btn.classList.add('on');
+  if(f==='arrived') btn.classList.add('green');
+  if(f==='delayed') btn.classList.add('red');
+  renderList();
+}
+
+function renderList(){
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  let list=[...shipments];
+  if(activeFilter==='transit')   list=list.filter(s=>s.status==='transit'||s.status==='customs');
+  if(activeFilter==='ordered')   list=list.filter(s=>s.status==='ordered');
+  if(activeFilter==='scheduled') list=list.filter(s=>s.status==='scheduled');
+  if(activeFilter==='arrived')   list=list.filter(s=>s.status==='arrived');
+  if(activeFilter==='delayed')   list=list.filter(s=>s.status==='delayed'||(s.status!=='arrived'&&s.status!=='ordered'&&s.status!=='scheduled'&&daysUntil(s.eta)!==null&&daysUntil(s.eta)<0));
+  if(q) list=list.filter(s=>[s.container,s.carrier,s.vendor,s.po].some(v=>String(v||'').toLowerCase().includes(q)));
+  // Sort: overdue first, then by ETA
+  list.sort((a,b)=>{
+    const da=daysUntil(a.eta)||9999, db=daysUntil(b.eta)||9999;
+    return da-db;
+  });
+
+  const el=document.getElementById('ship-list');
+  if(!list.length){ el.innerHTML='<div style="padding:20px;text-align:center;color:var(--ink3);font-size:12px">No shipments found</div>'; return; }
+  const st=s=>STATUS[s]||STATUS.transit;
+
+  el.innerHTML=list.map(s=>{
+    const ec=etaCls(s.eta,s.status);
+    const items=s.items||[];
+    const results=calcAllItems(s);
+    const totalLanded=results.reduce((a,r)=>a+r.landedCost,0);
+    return`<div class="ship-item ${st(s.status).li}${s.id===activeId?' active':''}" onclick="selectShipment('${s.id}')">
+      <div class="si-top">
+        <div class="si-num">${s.container||'New Shipment'}</div>
+        <div class="si-val">${totalLanded>0?fmt$(totalLanded):(s.shippingCost?fmt$(s.shippingCost):'—')}</div>
+      </div>
+      <div class="si-bot">
+        <span class="si-meta">${s.vendor||s.carrier||'—'} · ${items.length} item${items.length!==1?'s':''}</span>
+        <span class="si-eta ${ec}">${etaLbl(s.eta,s.status)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Select shipment ───────────────────────────────────────────────────────
+function selectShipment(id){
+  // Try exact id match first, fallback to container/po match
+  let ship = shipments.find(s=>String(s.id)===String(id));
+  if(!ship) ship = shipments.find(s=>s.container===id||s.po===id);
+  if(!ship){ console.warn('selectShipment: not found', id); return; }
+  activeId = ship.id;
+  activeTab='costs';
+  renderList();
+  renderRight();
+}
+
+// ── Render right panel ────────────────────────────────────────────────────
+function renderRight(){
+  const ship=shipments.find(s=>String(s.id)===String(activeId));
+  if(!ship){
+    document.getElementById('right').innerHTML=`<div class="empty-right"><div class="empty-icon">🚢</div><div class="empty-title">Select or Create a Shipment</div><div class="empty-sub">Click + New Shipment or select one from the list.</div></div>`;
+    return;
+  }
+  const st=STATUS[ship.status]||STATUS.transit;
+  document.getElementById('right').innerHTML=`
+    <div class="tabs-bar">
+      <div class="tabs">
+        <button class="tab${activeTab==='costs'?' active':''}" onclick="switchTab('costs')">💰 Items & Costs</button>
+        <button class="tab${activeTab==='info'?' active':''}" onclick="switchTab('info')">🚢 Shipment Info</button>
+        <button class="tab${activeTab==='summary'?' active':''}" onclick="switchTab('summary')">📊 Summary</button>
+      </div>
+      <div class="tab-actions">
+        <span class="status-badge ${st.cls}" style="padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700">${st.label}</span>
+        <button class="btn-tab" onclick="openEditShipment('${ship.id}')">✏️ Edit Shipment</button>
+        <button class="btn-tab" style="color:var(--red)" onclick="deleteShipment('${ship.id}')">Delete</button>
+      </div>
+    </div>
+    <div class="tab-content" id="tab-content"></div>`;
+  renderTab();
+}
+
+function switchTab(t){ activeTab=t; renderRight(); }
+
+function renderTab(){
+  const ship=shipments.find(s=>String(s.id)===String(activeId)); if(!ship) return;
+  const el=document.getElementById('tab-content');
+  if(activeTab==='costs') el.innerHTML=renderCostsTab(ship);
+  else if(activeTab==='info') el.innerHTML=renderInfoTab(ship);
+  else el.innerHTML=renderSummaryTab(ship);
+}
+
+// ── Costs tab ─────────────────────────────────────────────────────────────
+function renderCostsTab(ship){
+  const items=ship.items||[];
+  const results=calcAllItems(ship);
+  const contCbm=parseFloat(ship.containerCbm)||68;
+  const perCbm=(parseFloat(ship.shippingCost)||0)/contCbm;
+
+  return`
+  <div class="ship-settings">
+    <div class="ss-title">Shipping & Cost Settings — <span style="color:var(--ink2);font-weight:500;text-transform:none">${ship.container||'this shipment'}</span></div>
+    <div class="ss-grid">
+      <div class="ss-field">
+        <div class="ss-label">Shipping Total ($)</div>
+        <input class="ss-input" type="number" placeholder="0" min="0" step="0.01"
+          value="${ship.shippingCost||''}"
+          oninput="updateShipField('${ship.id}','shippingCost',this.value)">
+        <div class="ss-info">${perCbm>0?'$'+perCbm.toFixed(2)+'/CBM':''}</div>
+      </div>
+      <div class="ss-field">
+        <div class="ss-label">Container CBM</div>
+        <input class="ss-input" type="number" placeholder="68" min="1" step="0.1"
+          value="${ship.containerCbm||68}"
+          oninput="updateShipField('${ship.id}','containerCbm',this.value)">
+      </div>
+      <div class="ss-field">
+        <div class="ss-label">Split By</div>
+        <select class="ss-select" onchange="updateShipField('${ship.id}','splitMethod',this.value)">
+          <option value="cbm"${(ship.splitMethod||'cbm')==='cbm'?' selected':''}>CBM</option>
+          <option value="qty"${ship.splitMethod==='qty'?' selected':''}>Qty</option>
+        </select>
+      </div>
+      <div class="ss-field">
+        <div class="ss-label">Default Tariff %</div>
+        <input class="ss-input" type="number" placeholder="0" min="0" step="0.1"
+          value="${ship.defaultTariff||''}"
+          oninput="updateShipField('${ship.id}','defaultTariff',this.value)">
+      </div>
+
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+      <div class="ss-label" style="margin:0;white-space:nowrap">Quote Margin</div>
+      <select class="ss-select" style="max-width:160px" onchange="updateShipField('${ship.id}','quoteMargin',this.value)">
+        ${(()=>{const opts=[0,5,10,15,20,25,30,33,35,40,42,45,50,55,60,65,70];const cur=parseFloat(ship.quoteMargin)||0;return opts.map(mv=>'<option value="'+mv+'"'+(cur===mv?' selected':'')+'>'+(mv===0?'No markup':mv+'% margin')+'</option>').join('');})()}
+      </select>
+      <div class="ss-info">Sell = Landed ÷ (1 − margin%) → rounded to .49 or .99</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;font-weight:700;color:var(--ink2)">${items.length} item${items.length!==1?'s':''} in this shipment</div>
+    <div style="display:flex;gap:8px">
+      ${sheetRows?`<button class="btn-tab" onclick="openBrowse()">🔍 Browse Sheet</button>`:''}
+      <button class="btn-tab primary" onclick="openAddItem()">+ Add Item</button>
+    </div>
+  </div>
+
+  ${items.length?`
+  <div style="overflow-x:auto">
+    <table class="cost-table">
+      <thead><tr>
+        <th>Item #</th><th>Description</th>
+        <th class="num">Unit Cost</th><th class="num">CBM/ctn</th><th class="num">Qty/ctn</th>
+        <th class="num">Ship/ctn</th><th class="num">Tariff%</th>
+        <th class="num">Tariff/ctn</th><th class="num">Landed Cost</th>
+        <th class="num">Sell Price</th><th class="num">Margin%</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${items.map((it,i)=>{
+          const r=results[i];
+          const cbmV=parseFloat(it.cbm||0);
+          const shipPerCtn = cbmV>0&&parseFloat(ship.shippingCost)>0 ? (cbmV/contCbm)*parseFloat(ship.shippingCost) : 0;
+          const ctnLabel = (contCbm/cbmV).toFixed(1)+' ctns/ctr'+(shipPerCtn>0?' · $'+shipPerCtn.toFixed(2)+'/ctn':'');
+          const cbmHint = cbmV>0 ? '<div class="cbm-hint">= '+ctnLabel+'</div>' : '';
+          const splitCls=it.shipManual!=null?'bs-manual':cbmV>0?'bs-cbm':'bs-qty';
+          const splitLbl=it.shipManual!=null?'manual':cbmV>0?'CBM':'QTY';
+          const defT=parseFloat(ship.defaultTariff)||0;
+          return`<tr>
+            <td class="item-code">${it.item}</td>
+            <td style="max-width:180px;font-size:11px;color:var(--ink2)">${it.desc||'—'}</td>
+            <td class="num"><input class="editable" type="number" value="${it.cost||''}" min="0" step="0.0001"
+              onchange="updateItemField('${ship.id}','${it.id}','cost',this.value)" placeholder="0"></td>
+            <td class="num">
+              <input class="editable" type="number" value="${it.cbm!=null?it.cbm:''}" min="0" step="0.0001"
+                onchange="updateItemField('${ship.id}','${it.id}','cbm',this.value)" placeholder="—">
+              <span class="badge-split ${splitCls}">${splitLbl}</span>
+              ${cbmHint}
+            </td>
+            <td class="num"><input class="editable" type="number" value="${it.qty!=null?it.qty:''}" min="0" step="1"
+              onchange="updateItemField('${ship.id}','${it.id}','qty',this.value)" placeholder="—"></td>
+            <td class="num">${renderShipUnitCell(it,r,ship.id)}</td>
+            <td class="num"><input class="editable" type="number" value="${it.tariff!=null?it.tariff:''}" min="0" step="0.1"
+              onchange="updateItemField('${ship.id}','${it.id}','tariff',this.value)" placeholder="${defT}%"></td>
+
+            <td class="num" style="color:var(--amber)">${fmt4(r.tariffPerCtn)}</td>
+            <td class="num"><span class="landed-pill">${fmt4(r.landedCost)}</span></td>
+            <td class="num"><span class="sell-pill">${fmt4(r.sellPrice)}</span></td>
+            <td class="num"><span class="margin-pill ${mPill(r.marginPct)}">${r.marginPct.toFixed(1)}%</span></td>
+            <td>
+              <div style="display:flex;gap:3px">
+                <button class="btn-del-row" onclick="editItem('${ship.id}','${it.id}')" title="Edit">✏️</button>
+                <button class="btn-del-row" onclick="removeItem('${ship.id}','${it.id}')" title="Remove">✕</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`
+  :`<div style="text-align:center;padding:40px;color:var(--ink3)">
+    <div style="font-size:30px;margin-bottom:10px">📦</div>
+    <div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px">No items yet</div>
+    <div style="font-size:12px;margin-bottom:14px">Add items to calculate landed costs and generate a quote.</div>
+    <button class="btn-tab primary" onclick="openAddItem()">+ Add Item</button>
+    ${sheetRows?`<button class="btn-tab" style="margin-left:8px" onclick="openBrowse()">🔍 Browse Sheet</button>`:''}
+  </div>`}`;
+}
+
+// ── Info tab ───────────────────────────────────────────────────────────────
+function renderInfoTab(ship){
+  const fld=(lbl,key,type='text',placeholder='')=>`
+    <div class="ic-row">
+      <div class="ic-label">${lbl}</div>
+      ${type==='select-status'?`<select class="ic-select" onchange="updateShipField('${ship.id}','${key}',this.value)">
+        ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}"${k===ship[key]?' selected':''}>${v.label}</option>`).join('')}
+      </select>`
+      :`<input class="ic-input" type="${type}" value="${ship[key]||''}" placeholder="${placeholder}"
+          onchange="updateShipField('${ship.id}','${key}',this.value)">`}
+    </div>`;
+
+  const d=daysUntil(ship.eta);
+  const transit_pct=ship.etd&&ship.eta?Math.min(100,Math.max(0,Math.round((new Date()-new Date(ship.etd+'T00:00:00'))/(new Date(ship.eta+'T00:00:00')-new Date(ship.etd+'T00:00:00'))*100))):0;
+
+  return`<div class="info-grid">
+    <div class="info-card">
+      <div class="ic-title">Container Details</div>
+      ${fld('Container #','container','text','e.g. MSCU1234567')}
+      ${fld('Carrier','carrier','text','e.g. MSC')}
+      ${fld('Status','status','select-status')}
+      ${fld('PO # / Reference','po','text','e.g. PO-2026-001')}
+      ${fld('Vendor / Supplier','vendor','text','e.g. GOOD QUALITY')}
+    </div>
+    <div class="info-card">
+      <div class="ic-title">Voyage</div>
+      ${fld('ETD (Departure)','etd','date')}
+      ${fld('ETA (Arrival)','eta','date')}
+      ${fld('Port of Loading','pol','text','e.g. Shanghai')}
+      ${fld('Port of Discharge','pod','text','e.g. New York')}
+      ${ship.etd&&ship.eta?`<div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px">
+          <span>Departed ${fmtDate(ship.etd)}</span>
+          <span>ETA ${fmtDate(ship.eta)}${d!==null&&ship.status!=='arrived'?' ('+Math.abs(d)+'d '+(d<0?'overdue':'left')+')':''}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:20px;height:8px;overflow:hidden">
+          <div style="height:100%;border-radius:20px;width:${transit_pct}%;background:linear-gradient(90deg,var(--teal-dk),var(--teal));transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--ink3);margin-top:3px;text-align:center">${transit_pct}% of voyage</div>
+      </div>`:''}
+    </div>
+    <div class="info-card" style="grid-column:span 2">
+      <div class="ic-title">Notes</div>
+      <textarea class="ic-input" rows="4" placeholder="Any notes, issues, or comments..."
+        onchange="updateShipField('${ship.id}','notes',this.value)">${ship.notes||''}</textarea>
+    </div>
+  </div>`;
+}
+
+// ── Summary tab ────────────────────────────────────────────────────────────
+function renderSummaryTab(ship){
+  const items=ship.items||[];
+  const results=calcAllItems(ship);
+  const totalLanded=results.reduce((s,r)=>s+r.landedCost,0);
+  const totalSell  =results.reduce((s,r)=>s+r.sellPrice,0);
+  const totalProfit=results.reduce((s,r)=>s+r.marginDollar,0);
+  const avgMargin  =totalSell>0?(totalProfit/totalSell*100).toFixed(1):0;
+  const totalCargo =items.reduce((s,i)=>s+(parseFloat(i.cost)||0),0);
+  const totalTariff=results.reduce((s,r)=>s+r.tariffPerCtn,0);
+  const shipping   =parseFloat(ship.shippingCost)||0;
+
+  return`
+  <div class="sum-row">
+    <div class="sum-card"><div class="sc-lbl">Cargo Cost</div><div class="sc-val">${fmt$(totalCargo)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">cost of all items</div></div>
+    <div class="sum-card"><div class="sc-lbl">Shipping</div><div class="sc-val amber">${fmt$(shipping)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">container cost</div></div>
+    <div class="sum-card"><div class="sc-lbl">Total Tariff</div><div class="sc-val" style="color:#fca5a5">${fmt$(totalTariff)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">across all items</div></div>
+    <div class="sum-card"><div class="sc-lbl">Total Landed</div><div class="sc-val teal">${fmt$(totalLanded)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">cargo+shipping+tariff</div></div>
+  </div>
+  <div class="sum-row">
+    <div class="sum-card"><div class="sc-lbl">Quote Total</div><div class="sc-val green">${fmt$(totalSell)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">at ${ship.quoteMargin||0}% margin</div></div>
+    <div class="sum-card"><div class="sc-lbl">Total Profit</div><div class="sc-val green">${fmt$(totalProfit)}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">sell minus landed</div></div>
+    <div class="sum-card"><div class="sc-lbl">Avg Margin</div><div class="sc-val ${mPill(avgMargin)==='mg'?'green':mPill(avgMargin)==='mm'?'amber':'red'}">${avgMargin}%</div><span class="sc-pill ${mPill(avgMargin)}">${mPill(avgMargin)==='mg'?'Healthy':mPill(avgMargin)==='mm'?'OK':'Low'}</span></div>
+    <div class="sum-card"><div class="sc-lbl">Items</div><div class="sc-val">${items.length}</div><div style="font-size:10px;color:var(--ink3);margin-top:3px">in this container</div></div>
+  </div>
+
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Cost Breakdown</div>
+    ${totalLanded>0?`
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${[['Cargo','${totalCargo}','var(--ink2)',totalCargo],['Shipping','${shipping}','var(--amber)',shipping],['Tariff','${totalTariff}','var(--red)',totalTariff]].map(([lbl,,clr,val])=>`
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:90px;font-size:11px;color:var(--ink3)">${lbl}</div>
+          <div style="flex:1;background:rgba(255,255,255,.06);border-radius:20px;height:8px;overflow:hidden">
+            <div style="height:100%;border-radius:20px;width:${Math.round(val/(totalLanded)*100)}%;background:${clr};transition:width .3s"></div>
+          </div>
+          <div style="width:70px;text-align:right;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${clr}">${fmt$(val)}</div>
+          <div style="width:40px;text-align:right;font-size:10px;color:var(--ink3)">${Math.round(val/(totalLanded)*100)}%</div>
+        </div>`).join('')}
+    </div>`:'<div style="color:var(--ink3);font-size:12px">Add items and shipping cost to see breakdown.</div>'}
+  </div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-tab primary" onclick="exportShipment('${ship.id}')">⬇ Export This Shipment</button>
+    <button class="btn-tab" onclick="exportAll()">⬇ Export All Shipments</button>
+  </div>`;
+}
+
+// ── Field updates ─────────────────────────────────────────────────────────
+function updateShipField(id,field,value){
+  const s=shipments.find(x=>String(x.id)===String(id)); if(!s) return;
+  s[field]=['shippingCost','containerCbm','defaultTariff','defaultLabor','quoteMargin'].includes(field)?parseFloat(value)||0:value;
+  persist(); updateKPIs(); renderList();
+  // Re-render costs tab only if relevant field changed
+  if(['shippingCost','containerCbm','splitMethod','defaultTariff','defaultLabor','quoteMargin'].includes(field) && activeTab==='costs'){
+    renderTab();
+  } else if(activeTab==='summary'){ renderTab(); }
+}
+
+function updateItemField(shipId,itemId,field,value){
+  const s=shipments.find(x=>String(x.id)===String(shipId)); if(!s) return;
+  const it=s.items?.find(i=>String(i.id)===String(itemId)); if(!it) return;
+  const nullFields=['cbm','shipManual','tariff','labor'];
+  it[field]=nullFields.includes(field)?(value===''||value===null?null:parseFloat(value)):parseFloat(value)||0;
+  // CBM hint update
+  if(field==='cbm'&&value!==''&&parseFloat(value)>0){
+    const contCbm=parseFloat(s.containerCbm)||68;
+    const hint=document.getElementById('cbm-hint-'+itemId);
+    if(hint) hint.textContent='= '+(contCbm/parseFloat(value)).toFixed(1)+' ctns/container';
+  }
+  persist(); updateKPIs(); renderList();
+  if(activeTab==='costs') renderTab();
+  if(activeTab==='summary') renderTab();
+}
+
+// ── Shipment CRUD ─────────────────────────────────────────────────────────
+function openNewShipment(){
+  editingShipId=null;
+  document.getElementById('mship-title').textContent='New Shipment';
+  ['ms-container','ms-vendor','ms-po','ms-pol','ms-pod','ms-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ms-carrier').value='';
+  document.getElementById('ms-status').value='transit';
+  document.getElementById('ms-eta').value='';
+  document.getElementById('ms-etd').value='';
+  document.getElementById('ms-cbm').value='68';
+  document.getElementById('ms-shipping').value='';
+  document.getElementById('ms-tariff').value='';
+  document.getElementById('ms-margin').value='0';
+  document.getElementById('ms-split').value='cbm';
+  document.getElementById('ms-margin').value='0';
+  openModal('modal-ship');
+}
+
+function openEditShipment(id){
+  const s=shipments.find(x=>String(x.id)===String(id)); if(!s) return;
+  editingShipId=id;
+  document.getElementById('mship-title').textContent='Edit Shipment';
+  document.getElementById('ms-container').value=s.container||'';
+  document.getElementById('ms-carrier').value=s.carrier||'';
+  document.getElementById('ms-status').value=s.status||'transit';
+  document.getElementById('ms-eta').value=s.eta||'';
+  document.getElementById('ms-etd').value=s.etd||'';
+  document.getElementById('ms-vendor').value=s.vendor||'';
+  document.getElementById('ms-po').value=s.po||'';
+  document.getElementById('ms-pol').value=s.pol||'';
+  document.getElementById('ms-pod').value=s.pod||'';
+  document.getElementById('ms-cbm').value=s.containerCbm||68;
+  document.getElementById('ms-shipping').value=s.shippingCost||'';
+  document.getElementById('ms-tariff').value=s.defaultTariff||'';
+  document.getElementById('ms-margin').value=s.quoteMargin||0;
+  document.getElementById('ms-split').value=s.splitMethod||'cbm';
+  document.getElementById('ms-margin').value=s.quoteMargin||0;
+  document.getElementById('ms-notes').value=s.notes||'';
+  openModal('modal-ship');
+}
+
+function saveShipment(){
+  const container=document.getElementById('ms-container').value.trim().toUpperCase();
+  const entry={
+    container,
+    carrier:   document.getElementById('ms-carrier').value,
+    status:    document.getElementById('ms-status').value,
+    eta:       document.getElementById('ms-eta').value,
+    etd:       document.getElementById('ms-etd').value,
+    vendor:    document.getElementById('ms-vendor').value.trim(),
+    po:        document.getElementById('ms-po').value.trim(),
+    pol:       document.getElementById('ms-pol').value.trim(),
+    pod:       document.getElementById('ms-pod').value.trim(),
+    containerCbm:  parseFloat(document.getElementById('ms-cbm').value)||68,
+    shippingCost:  parseFloat(document.getElementById('ms-shipping').value)||0,
+    defaultTariff: parseFloat(document.getElementById('ms-tariff').value)||0,
+    defaultLabor: 0,
+    quoteMargin:   parseFloat(document.getElementById('ms-margin').value)||0,
+    notes:     document.getElementById('ms-notes').value.trim(),
+    splitMethod: 'cbm',
+  };
+  if(editingShipId){
+    const idx=shipments.findIndex(s=>s.id===editingShipId);
+    if(idx>=0) shipments[idx]={...shipments[idx],...entry};
+    closeModal('modal-ship'); persist(); updateKPIs(); renderList(); renderRight();
+  } else {
+    entry.id=String(Date.now())+'_'+String(Math.random()).slice(2); entry.items=[]; entry.addedAt=new Date().toISOString();
+    shipments.push(entry);
+    closeModal('modal-ship'); persist(); updateKPIs(); renderList();
+    activeId=entry.id; activeTab='costs'; renderRight();
+  }
+}
+
+function deleteShipment(id){
+  if(!confirm('Delete this shipment and all its items?')) return;
+  shipments=shipments.filter(s=>s.id!==id);
+  activeId=null; persist(); updateKPIs(); renderList(); renderRight();
+}
+
+// ── Item CRUD ─────────────────────────────────────────────────────────────
+function openAddItem(){
+  editingItemId=null;
+  document.getElementById('mitem-title').textContent='Add Item';
+  ['mi-item','mi-desc','mi-cbm','mi-qty','mi-tariff','mi-ship-manual'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mi-cost').value='';
+  openModal('modal-item');
+}
+
+function editItem(shipId,itemId){
+  const s=shipments.find(x=>String(x.id)===String(shipId)); if(!s) return;
+  const it=s.items?.find(i=>String(i.id)===String(itemId)); if(!it) return;
+  editingItemId=itemId;
+  document.getElementById('mitem-title').textContent='Edit Item';
+  document.getElementById('mi-item').value=it.item||'';
+  document.getElementById('mi-desc').value=it.desc||'';
+  document.getElementById('mi-cost').value=it.cost||'';
+  document.getElementById('mi-cbm').value=it.cbm!=null?it.cbm:'';
+  document.getElementById('mi-qty').value=it.qty!=null?it.qty:'';
+  document.getElementById('mi-tariff').value=it.tariff!=null?it.tariff:'';
+  document.getElementById('mi-ship-manual').value=it.shipManual!=null?it.shipManual:'';
+  openModal('modal-item');
+}
+
+function saveItem(){
+  const item=document.getElementById('mi-item').value.trim().toUpperCase();
+  const cost=parseFloat(document.getElementById('mi-cost').value);
+  if(!item){ alert('Item # is required.'); return; }
+  if(isNaN(cost)){ alert('Unit cost is required.'); return; }
+  const ship=shipments.find(s=>String(s.id)===String(activeId)); if(!ship) return;
+  if(!ship.items) ship.items=[];
+  const entry={
+    id: editingItemId||Date.now()+Math.random(),
+    item, desc:document.getElementById('mi-desc').value.trim(), cost,
+    cbm:   document.getElementById('mi-cbm').value!==''?parseFloat(document.getElementById('mi-cbm').value):null,
+    qty:   document.getElementById('mi-qty').value!==''?parseFloat(document.getElementById('mi-qty').value):null,
+    tariff:document.getElementById('mi-tariff').value!==''?parseFloat(document.getElementById('mi-tariff').value):null,
+    labor: null,
+    shipManual:document.getElementById('mi-ship-manual').value!==''?parseFloat(document.getElementById('mi-ship-manual').value):null,
+  };
+  if(editingItemId){
+    const idx=ship.items.findIndex(i=>i.id===editingItemId);
+    if(idx>=0) ship.items[idx]=entry;
+  } else {
+    const existing=ship.items.find(i=>i.item===item);
+    if(existing){ if(!confirm('Item '+item+' already exists. Update it?')) return; Object.assign(existing,entry); }
+    else ship.items.push(entry);
+  }
+  closeModal('modal-item'); persist(); updateKPIs(); renderList();
+  if(activeTab==='costs'||activeTab==='summary') renderTab();
+}
+
+function removeItem(shipId,itemId){
+  const s=shipments.find(x=>String(x.id)===String(shipId)); if(!s) return;
+  s.items=s.items.filter(i=>i.id!==itemId);
+  persist(); updateKPIs(); renderList();
+  if(activeTab==='costs'||activeTab==='summary') renderTab();
+}
+
+// ── Browse from uploaded sheet ────────────────────────────────────────────
+function openBrowse(){
+  if(!sheetRows){ alert('Upload a sheet first.'); return; }
+  browseSelected.clear();
+  document.getElementById('browse-search').value='';
+  renderBrowse(); updateBrowseCount();
+  openModal('modal-browse');
+}
+
+function renderBrowse(){
+  const q=document.getElementById('browse-search').value.toLowerCase().trim();
+  const ship=shipments.find(s=>String(s.id)===String(activeId));
+  const {itemCol,descCol,costCol,cbmCol,qtyCol}=sheetCols||{};
+  const rows=(sheetRows||[]).filter(row=>{
+    const it=String(row[itemCol]||'').trim().toUpperCase();
+    if(!it||it==='ITEM#'||it==='ITEM NO') return false;
+    if(!q) return true;
+    return it.toLowerCase().includes(q)||String(row[descCol]||'').toLowerCase().includes(q);
+  });
+  const list=document.getElementById('browse-list');
+  list.innerHTML=rows.length?rows.map(row=>{
+    const it=String(row[itemCol]||'').trim().toUpperCase();
+    const desc=String(row[descCol]||'').trim();
+    const cost=parseFloat(row[costCol])||0;
+    const cbm=cbmCol?parseFloat(row[cbmCol])||null:null;
+    const qty=qtyCol?parseFloat(row[qtyCol])||null:null;
+    const already=ship?.items?.find(i=>i.item===it);
+    const sel=browseSelected.has(it);
+    return`<div class="browse-row${sel?' sel':''}" onclick="toggleBrowse('${it}',this)">
+      <input type="checkbox" class="br-check" ${sel?'checked':''} onclick="event.stopPropagation();toggleBrowse('${it}',this.closest('.browse-row'))">
+      <div class="br-num">${it}${already?'<span style="font-size:9px;font-weight:400;color:var(--ink3);margin-left:4px;font-family:Inter">added</span>':''}</div>
+      <div class="br-desc">${desc||'—'}</div>
+      <div class="br-cost">$${cost.toFixed(4)}</div>
+      <div class="br-dims">${cbm?cbm+' CBM':qty?qty+'/ctn':''}</div>
+    </div>`;
+  }).join(''):'<div style="padding:30px;text-align:center;color:var(--ink3)">No items found.</div>';
+}
+
+function toggleBrowse(item,el){
+  if(browseSelected.has(item)) browseSelected.delete(item); else browseSelected.add(item);
+  const cb=el.querySelector('input[type=checkbox]'); if(cb) cb.checked=browseSelected.has(item);
+  el.classList.toggle('sel',browseSelected.has(item));
+  updateBrowseCount();
+}
+function selectAllBrowse(){
+  const {itemCol}=sheetCols||{};
+  (sheetRows||[]).forEach(row=>{ const it=String(row[itemCol]||'').trim().toUpperCase(); if(it&&it!=='ITEM#') browseSelected.add(it); });
+  renderBrowse(); updateBrowseCount();
+}
+function updateBrowseCount(){ document.getElementById('browse-count').textContent=browseSelected.size+' selected'; }
+
+function addBrowseSelected(){
+  if(!browseSelected.size){ alert('Select at least one item.'); return; }
+  const ship=shipments.find(s=>String(s.id)===String(activeId)); if(!ship) return;
+  if(!ship.items) ship.items=[];
+  const {itemCol,descCol,costCol,cbmCol,qtyCol}=sheetCols||{};
+  let added=0;
+  (sheetRows||[]).forEach(row=>{
+    const it=String(row[itemCol]||'').trim().toUpperCase();
+    if(!browseSelected.has(it)) return;
+    const cost=parseFloat(row[costCol])||0;
+    const cbm=cbmCol?parseFloat(row[cbmCol])||null:null;
+    const qty=qtyCol?parseFloat(row[qtyCol])||null:null;
+    const desc=descCol?String(row[descCol]||'').trim():'';
+    const existing=ship.items.find(i=>i.item===it);
+    if(existing){ Object.assign(existing,{desc,cost,cbm,qty}); }
+    else{ ship.items.push({id:String(Date.now())+'_'+String(Math.random()).slice(2),item:it,desc,cost,cbm,qty,tariff:null,labor:null,shipManual:null}); added++; }
+  });
+  persist(); closeModal('modal-browse'); updateKPIs(); renderList();
+  if(activeTab==='costs'||activeTab==='summary') renderTab();
+}
+
+// ── Upload sheet ──────────────────────────────────
+// ── Upload Item Master (CBM + Tariff sheet) ────────────────────────────────
+function uploadItemMaster(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!rows.length){ alert('No data found.'); return; }
+      const k=Object.keys(rows[0]);
+      const col=(...pats)=>k.find(c=>pats.some(p=>typeof p==='string'?c.toLowerCase()===p.toLowerCase():p.test(c.toLowerCase())))||null;
+
+      const itemCol   = col('item no','item#','itemno','item code','sku',/^item.*no|^item.*#|^itemno|^sku/);
+      const descCol   = col('description','desc',/desc|name/);
+      const costCol   = col('unit cost','cost','price',/unit.?cost|^cost|^price/);
+      const cbmCol    = col('cbm','cbm/ctn','cbm per carton',/cbm/);
+      const qtyCol    = col('qty/ctn','qty per carton','qty per ctn','pcs/ctn',/qty.?ctn|qty.?carton|pcs.?ctn/);
+      const tariffCol = col('tariff','tariff%','tariff %',/tariff/);
+
+      if(!itemCol){
+        alert('Could not find Item # column. Columns found: '+k.join(', '));
+        return;
+      }
+
+      sheetRows = rows;
+      sheetCols = {itemCol, descCol, costCol, cbmCol, qtyCol, tariffCol};
+
+      // Save to IndexedDB
+      idbSave('item_sheet', rows).catch(e=>console.warn('sheet save:',e));
+      idbSave('item_sheet_cols', sheetCols).catch(e=>console.warn('cols save:',e));
+      try{ localStorage.setItem('sct_sheet_name', file.name); }catch(e){}
+
+      // Auto-update CBM + tariff on ALL items across ALL shipments
+      let updatedItems=0, updatedShipments=new Set();
+      shipments.forEach(ship=>{
+        (ship.items||[]).forEach(it=>{
+          const row=rows.find(r=>String(r[itemCol]||'').trim().toUpperCase()===it.item);
+          if(!row) return;
+          let changed=false;
+          if(cbmCol && row[cbmCol]!==''){
+            const cbm=parseFloat(row[cbmCol]);
+            if(!isNaN(cbm)&&cbm>0 && it.cbm!==cbm){ it.cbm=cbm; changed=true; }
+          }
+          if(tariffCol && row[tariffCol]!==''){
+            const tar=parseFloat(row[tariffCol]);
+            if(!isNaN(tar) && it.tariff!==tar){ it.tariff=tar; changed=true; }
+          }
+          if(descCol && row[descCol] && !it.desc){
+            it.desc=String(row[descCol]).trim(); changed=true;
+          }
+          if(changed){ it.shipManual=null; updatedItems++; updatedShipments.add(ship.id); }
+        });
+      });
+
+      if(updatedItems>0){ persist(); renderList(); if(activeId&&updatedShipments.has(activeId)) renderTab(); }
+
+      const statusEl = document.getElementById('item-master-status');
+      if(statusEl){
+        statusEl.innerHTML = `<span style="color:var(--green)">✓ ${rows.length} items loaded</span>`
+          + (cbmCol?` · CBM ✓`:'')
+          + (tariffCol?` · Tariff ✓`:'')
+          + (updatedItems>0?`<br><span style="color:var(--amber)">${updatedItems} item fields updated</span>`:'');
+      }
+      if(activeId) renderTab(); // re-render to show Browse Sheet button
+    }catch(err){ alert('Error reading file: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+// ── Upload Shipment Sheet (container list) ─────────────────────────────────
+
+// ── Parse Purchase Order Report format (raw array rows) ───────────────────
+function parsePOReportRaw(rawRows){
+  const parseD=v=>{
+    if(!v) return '';
+    if(typeof v==='number'){ try{ return new Date(Math.round((v-25569)*86400000)).toISOString().slice(0,10); }catch(e){} }
+    if(v instanceof Date) return v.toISOString().slice(0,10);
+    try{ const d=new Date(String(v)); if(!isNaN(d)) return d.toISOString().slice(0,10); }catch(e){}
+    return '';
+  };
+  const today=new Date();
+  const statusFromPO=(eta, pu)=>{
+    // ETA takes priority — if there's an ETA the shipment is moving
+    if(eta){
+      const d=new Date(eta);
+      if(!isNaN(d)) return (d-today)<0 ? 'delayed' : 'transit';
+    }
+    // No ETA: check PU date (pickup/scheduled)
+    if(pu) return 'scheduled';
+    // Nothing set
+    return 'ordered';
+  };
+
+  // Detect which column layout: old (PO in col[2]) or new (PO in col[0])
+  const samplePORows = rawRows.filter(r=>Array.isArray(r) && typeof r[0]==='number' && r[0]>100000);
+  const newFormat = samplePORows.length > 0;
+
+  let pos=[], curPO=null, curItems=[];
+
+  rawRows.forEach(row=>{
+    if(!Array.isArray(row)) return;
+
+    // Detect PO header row
+    const isPOHeader = newFormat
+      ? (typeof row[0]==='number' && row[0]>100000)
+      : (typeof row[2]==='number' && row[2]>100000);
+
+    if(isPOHeader){
+      if(curPO){ curPO.items=curItems; pos.push(curPO); }
+      curItems=[];
+      if(newFormat){
+        // New format: col[0]=PO, col[2]=ETD, col[3]=Vendor, col[4]=phone
+        // col[7]=Units, col[8]=ETA, col[9]=PU date, col[13]=Freight, col[14]=Total
+        const vendor = String(row[3]||'').trim().replace(/^[+0-9\s]+$/,'') || String(row[4]||'').trim();
+        curPO={
+          po:      row[0],
+          date:    parseD(row[2]),    // ETD
+          vendor:  vendor || String(row[3]||'').trim(),
+          eta:     parseD(row[8]),    // ETA date
+          pu:      parseD(row[9]),    // PU/Received date
+          freight: typeof row[13]==='number'?row[13]:0,
+          total:   typeof row[14]==='number'?row[14]:0,
+        };
+      } else {
+        // Old format: col[2]=PO, col[3]=Date, col[4]=Vendor
+        const vendor=[row[4],row[3],row[5]].find(x=>x&&typeof x==='string'&&!/^[+0-9\s]/.test(String(x).trim()))||'';
+        curPO={
+          po:      row[2],
+          date:    parseD(row[3]),
+          vendor:  String(vendor).trim(),
+          eta:     parseD(row[8]),
+          pu:      '',
+          freight: typeof row[13]==='number'?row[13]:0,
+          total:   typeof row[14]==='number'?row[14]:0,
+        };
+      }
+    }
+    // Item row
+    else if(curPO && typeof row[0]==='string' && row[0].trim() &&
+            row[0].trim()!=='ITEM NUMBER' && row[0].trim()!=='Order'){
+      const item=row[0].trim();
+      const desc=String(row[3]||'').trim();
+      const qty =typeof row[11]==='number'?row[11]:0;
+      const cost=typeof row[14]==='number'?row[14]:0;
+      if(item && qty>0){
+        // Look up CBM and tariff from item sheet
+        let cbm=null, tariff=null;
+        if(sheetRows && sheetCols){
+          const ic=sheetCols.itemCol, cc=sheetCols.cbmCol, tc=sheetCols.tariffCol;
+          const match=ic!=null?sheetRows.find(r=>String(r[ic]||'').trim().toUpperCase()===item.toUpperCase()):null;
+          if(match){
+            if(cc!=null && match[cc]!=null){ const v=parseFloat(match[cc]); if(!isNaN(v)&&v>0) cbm=v; }
+            if(tc!=null && match[tc]!=null){ const v=parseFloat(match[tc]); if(!isNaN(v)) tariff=v; }
+          }
+        }
+        curItems.push({
+          id:String(Date.now())+'_'+String(Math.random()).slice(2),
+          item, desc, cost, cbm, qty, tariff:tariff, shipManual:null
+        });
+      }
+    }
+  });
+  if(curPO){ curPO.items=curItems; pos.push(curPO); }
+
+  // Clear and reload shipments
+  shipments=[];
+  let added=0;
+  pos.forEach(po=>{
+    const key='PO-'+po.po;
+    const status = statusFromPO(po.eta, po.pu);
+    const entry={
+      id: String(Date.now())+'_'+String(Math.random()).slice(2),
+      container: key, carrier:'',
+      status,
+      eta:  po.eta, etd: po.date, pu: po.pu||'',
+      vendor: po.vendor, po: String(po.po),
+      pol:'', pod:'',
+      containerCbm:68, shippingCost:po.freight,
+      defaultTariff:0, quoteMargin:0, splitMethod:'cbm',
+      notes: 'Total: $'+po.total.toLocaleString(undefined,{maximumFractionDigits:0})+' | '+po.items.length+' items',
+      addedAt: new Date().toISOString(),
+      items: po.items,
+    };
+    shipments.push(entry); added++;
+  });
+  persist(); updateKPIs(); renderList();
+  activeItemId=null;
+  if(itemViewOpen){ renderItemList(); renderItemDetail(null); }
+  alert('\u2713 Purchase Order Report imported: '+added+' shipments loaded.');
+}
+
+function uploadShipmentSheet(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+
+      // First try raw array mode to detect PO report format
+      const rawRows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+      // PO report: has a row where col[2] is an integer > 100000
+      const isPOReport=rawRows.some(r=>Array.isArray(r)&&((typeof r[2]==='number'&&r[2]>100000)||(typeof r[0]==='number'&&r[0]>100000)));
+      if(isPOReport){
+        parsePOReportRaw(rawRows); return;
+      }
+
+      // Normal flat sheet with headers
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!rows.length){ alert('No data found.'); return; }
+      const k=Object.keys(rows[0]);
+      const col=(...pats)=>k.find(c=>pats.some(p=>typeof p==='string'?c.toLowerCase()===p.toLowerCase():p.test(c.toLowerCase())))||null;
+      const contCol=col('container','container#','container no',/^container/);
+      if(!contCol){ alert('Could not find Container# column. Columns found: '+k.join(', ')); return; }
+      const parseD=v=>{ if(!v) return ''; try{ const d=new Date(String(v)); if(!isNaN(d)) return d.toISOString().slice(0,10); }catch(e){} return String(v).slice(0,10); };
+      const stMap=s=>{ const l=(s||'').toLowerCase(); return l.includes('arriv')?'arrived':l.includes('custom')?'customs':l.includes('delay')?'delayed':l.includes('order')?'ordered':'transit'; };
+      // Clear existing shipments and load fresh
+      shipments = [];
+      let added=0, updated=0;
+      rows.forEach(row=>{
+        const cont=String(row[contCol]||'').trim().toUpperCase(); if(!cont) return;
+        const entry={
+          container:cont,
+          carrier:  String(row[col('carrier',/carrier|line/)]||'').trim(),
+          status:   stMap(row[col('status',/status/)]),
+          eta:      parseD(row[col('eta',/eta|arrival/i)]),
+          etd:      parseD(row[col('etd',/etd|departure/i)]),
+          vendor:   String(row[col('vendor','supplier',/vendor|supplier/)]||'').trim(),
+          po:       String(row[col('po','po#',/^po|purchase/)]||'').trim(),
+          pol:      String(row[col('pol',/pol|port.?of.?load/)]||'').trim(),
+          pod:      String(row[col('pod',/pod|port.?of.?disch/)]||'').trim(),
+          shippingCost:  parseFloat(String(row[col('shipping','shipping cost',/shipping.?cost/)]||'').replace(/[$,]/g,''))||0,
+          containerCbm:  parseFloat(row[col('container cbm',/container.?cbm/)])||68,
+          defaultTariff: parseFloat(row[col('tariff',/tariff/)])||0,
+          quoteMargin:   parseFloat(row[col('margin',/margin/)])||0,
+          splitMethod:   'cbm',
+          notes: String(row[col('notes','remarks',/notes|remarks/)]||'').trim(),
+        };
+        entry.id=String(Date.now())+'_'+String(Math.random()).slice(2); entry.items=[]; entry.addedAt=new Date().toISOString(); shipments.push(entry); added++;
+      });
+      persist(); updateKPIs(); renderList();
+      alert('✓ '+added+' shipments added, '+updated+' updated.');
+    }catch(err){ alert('Error: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+function uploadSheet(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+      if(!rows.length){ alert('No data found.'); return; }
+      const k=Object.keys(rows[0]);
+      const col=(...pats)=>k.find(c=>pats.some(p=>typeof p==='string'?c.toLowerCase()===p.toLowerCase():p.test(c.toLowerCase())))||null;
+      const itemCol=col('item no','item#','itemno','item code',/^item.*no|^item.*#|^itemno|^sku/);
+      const contCol=col('container','container#',/^container/);
+
+      if(itemCol){
+        sheetCols={
+          itemCol,
+          descCol:   col('description','desc',/desc|name/),
+          costCol:   col('unit cost','cost','price',/unit.?cost|^cost|^price/),
+          cbmCol:    col('cbm',/cbm/),
+          qtyCol:    col('qty/ctn','qty per ctn',/qty.?ctn|qty.?carton|pcs.?ctn/),
+          tariffCol: col('tariff','tariff%',/tariff/),
+        };
+        sheetRows=rows;
+        // Save to IndexedDB so it persists across sessions
+        idbSave('item_sheet', rows).catch(e=>console.warn('sheet save:',e));
+        idbSave('item_sheet_cols', sheetCols).catch(e=>console.warn('cols save:',e));
+        try{ localStorage.setItem('sct_sheet_name', file.name); }catch(e){}
+        // Auto-update CBM + tariff on ALL existing items across ALL shipments
+        let updated=0;
+        shipments.forEach(ship=>{
+          (ship.items||[]).forEach(it=>{
+            const row=rows.find(r=>String(r[sheetCols.itemCol]||'').trim().toUpperCase()===it.item);
+            if(!row) return;
+            if(sheetCols.cbmCol && row[sheetCols.cbmCol]!==''){
+              const cbm=parseFloat(row[sheetCols.cbmCol]);
+              if(!isNaN(cbm)&&cbm>0){ it.cbm=cbm; updated++; }
+            }
+            if(sheetCols.tariffCol && row[sheetCols.tariffCol]!==''){
+              const tar=parseFloat(row[sheetCols.tariffCol]);
+              if(!isNaN(tar)){ it.tariff=tar; updated++; }
+            }
+            if(sheetCols.descCol && row[sheetCols.descCol] && !it.desc){
+              it.desc=String(row[sheetCols.descCol]).trim();
+            }
+          });
+        });
+        if(updated>0){ persist(); renderList(); if(activeId) renderTab(); }
+        if(activeId) renderTab();
+        const sheetName=localStorage.getItem('sct_sheet_name')||file.name;
+        // status already updated above
+        alert('\u2713 Item sheet loaded \u2014 '+rows.length+' items.'+(updated>0?' Updated '+updated+' item fields across your shipments.':'')+' Use "Browse Sheet" to add items to a shipment.');
+      } else if(contCol){
+        const parseD=v=>{ if(!v) return ''; const s=String(v).trim(); try{ const d=new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10); }catch(e){} return s; };
+        const stMap=s=>{ const l=(s||'').toLowerCase(); return l.includes('arriv')?'arrived':l.includes('custom')?'customs':l.includes('delay')?'delayed':l.includes('order')?'ordered':'transit'; };
+        let added=0,updated=0;
+        rows.forEach(row=>{
+          const cont=String(row[contCol]||'').trim().toUpperCase(); if(!cont) return;
+          const existing=shipments.find(s=>s.container===cont);
+          const entry={
+            container:cont,
+            carrier:String(row[col('carrier',/carrier|line/)]||'').trim(),
+            status:stMap(row[col('status',/status/)]),
+            eta:parseD(row[col('eta',/eta|arrival/i)]),
+            etd:parseD(row[col('etd',/etd|departure/i)]),
+            vendor:String(row[col('vendor','supplier',/vendor|supplier/)]||'').trim(),
+            po:String(row[col('po','po#',/^po|purchase/)]||'').trim(),
+            pol:String(row[col('pol',/pol|port.?of.?load/)]||'').trim(),
+            pod:String(row[col('pod',/pod|port.?of.?disch/)]||'').trim(),
+            shippingCost:parseFloat(String(row[col('shipping','shipping cost',/shipping.?cost/)]||'').replace(/[$,]/g,''))||0,
+            containerCbm:parseFloat(row[col('cbm','container cbm',/container.?cbm/)])||68,
+            defaultTariff:parseFloat(row[col('tariff',/tariff/)])||0,
+            defaultLabor:parseFloat(row[col('labor',/labor/)])||0,
+            quoteMargin:parseFloat(row[col('margin',/margin/)])||0,
+            splitMethod:'cbm',
+            notes:String(row[col('notes','remarks',/notes|remarks/)]||'').trim(),
+          };
+          if(existing){ Object.assign(existing,{...entry,id:existing.id,items:existing.items||[],addedAt:existing.addedAt}); updated++; }
+          else{ entry.id=Date.now()+Math.random(); entry.items=[]; entry.addedAt=new Date().toISOString(); shipments.push(entry); added++; }
+        });
+        persist(); updateKPIs(); renderList();
+        alert('\u2713 '+added+' shipments loaded.');
+      } else {
+        alert('Could not detect sheet type. For items: include "Item No" column. For shipments: include "Container#" column. Columns found: '+k.join(', '));
+      }
+    }catch(err){ alert('Error reading file: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function exportShipment(id){
+  const ship=shipments.find(s=>String(s.id)===String(id)); if(!ship){ alert('Not found.'); return; }
+  const wb=XLSX.utils.book_new();
+  const results=calcAllItems(ship);
+  const iH=['Item #','Description','Cost/ctn','CBM/ctn','Qty/ctn','Ship/ctn','Tariff%','Tariff/ctn','Landed/ctn','Sell Price/ctn','Margin%','Margin$'];
+  const iD=[iH,...(ship.items||[]).map((it,i)=>{
+    const r=results[i]; const tp=it.tariff!=null?it.tariff:(ship.defaultTariff||0); const lp=it.labor!=null?it.labor:(ship.defaultLabor||0);
+    return[it.item,it.desc,it.cost,it.cbm||'',it.qty||'',+r.shipPerCtn.toFixed(6),tp,+r.tariffPerCtn.toFixed(6),+r.landedCost.toFixed(6),+r.sellPrice.toFixed(4),+r.marginPct.toFixed(2),+r.marginDollar.toFixed(4)];
+  })];
+  const ws1=XLSX.utils.aoa_to_sheet(iD);
+  ws1['!cols']=iH.map((_,i)=>({wch:[14,35,10,10,10,12,9,9,12,13,12,10,12][i]}));
+  XLSX.utils.book_append_sheet(wb,ws1,'Items & Costs');
+  const infoD=[['Field','Value'],['Container',ship.container],['Carrier',ship.carrier],['Status',ship.status],['ETA',ship.eta],['ETD',ship.etd],['Vendor',ship.vendor],['PO',ship.po],['POL',ship.pol],['POD',ship.pod],['Shipping Cost',ship.shippingCost],['Container CBM',ship.containerCbm],['Default Tariff %',ship.defaultTariff],['Default Labor %',ship.defaultLabor],['Quote Margin %',ship.quoteMargin],['Notes',ship.notes]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(infoD),'Shipment Info');
+  XLSX.writeFile(wb,'shipment_'+(ship.container||'new')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportAll(){
+  if(!shipments.length){ alert('No shipments to export.'); return; }
+  const wb=XLSX.utils.book_new();
+  const hdr=['Container','Carrier','Status','ETA','Vendor','PO','Shipping $','# Items','Total Landed','Total Sell','Avg Margin%'];
+  const data=[hdr,...shipments.map(s=>{
+    const r=calcAllItems(s); const tl=r.reduce((a,x)=>a+x.landedCost,0); const ts=r.reduce((a,x)=>a+x.sellPrice,0);
+    return[s.container,s.carrier,s.status,s.eta,s.vendor,s.po,s.shippingCost,(s.items||[]).length,+tl.toFixed(2),+ts.toFixed(2),ts>0?+((ts-tl)/ts*100).toFixed(1):0];
+  })];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=hdr.map(()=>({wch:14}));
+  XLSX.utils.book_append_sheet(wb,ws,'All Shipments');
+  XLSX.writeFile(wb,'all_shipments_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ── Init ──────────────────────────────────────────────────────────────────
+// ── Item View — clean rewrite ─────────────────────────────────────────────
+let itemViewOpen = false;
+let activeItemId = null;
+
+function toggleItemView(){
+  itemViewOpen = !itemViewOpen;
+  const panel = document.getElementById('item-view');
+  const btn   = document.getElementById('btn-item-view');
+  if(itemViewOpen){
+    panel.style.display = 'flex';
+    btn.style.background = 'rgba(0,198,198,.15)';
+    btn.style.color = 'var(--teal)';
+    btn.style.border = '1px solid var(--teal)';
+    activeItemId = null;
+    renderItemList();
+    renderItemDetail(null);
+    setTimeout(()=>{ const el=document.getElementById('item-view-search'); if(el) el.focus(); }, 100);
+  } else {
+    panel.style.display = 'none';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.border = '';
+  }
+}
+
+function getAllItems(){
+  const map = {};
+  shipments.forEach(ship=>{
+    (ship.items||[]).forEach(it=>{
+      if(!it.item) return;
+      if(!map[it.item]) map[it.item] = { item:it.item, desc:it.desc||'', shipments:[] };
+      if(it.desc && !map[it.item].desc) map[it.item].desc = it.desc;
+      map[it.item].shipments.push({
+        shipId: ship.id, container: ship.container, vendor: ship.vendor,
+        po: ship.po, status: ship.status, eta: ship.eta, qty: it.qty, cost: it.cost,
+      });
+    });
+  });
+  return Object.values(map).sort((a,b)=>a.item.localeCompare(b.item));
+}
+
+function renderItemList(){
+  const q = (document.getElementById('item-view-search').value||'').toLowerCase().trim();
+  const items = getAllItems().filter(it=>
+    !q || it.item.toLowerCase().includes(q) || (it.desc||'').toLowerCase().includes(q)
+  );
+  const el = document.getElementById('item-list-panel');
+  if(!items.length){
+    el.innerHTML='<div style="padding:24px;text-align:center;color:var(--ink3);font-size:12px">No items found</div>';
+    return;
+  }
+  el.innerHTML = items.map(it=>{
+    const active = it.item === activeItemId;
+    const inTransit = it.shipments.filter(s=>(s.status==='transit'||s.status==='delayed'||s.status==='customs')&&s.eta);
+    const soonest = inTransit.sort((a,b)=>a.eta>b.eta?1:-1)[0];
+    const d = soonest ? daysUntil(soonest.eta) : null;
+    const etaColor = d===null?'var(--ink3)':d<0?'var(--red)':d<=14?'var(--amber)':'var(--teal)';
+    const etaText  = d===null?'':d<0?Math.abs(d)+'d late':d===0?'Today':d<=14?d+'d':fmtDate(soonest.eta);
+    return '<div class="iv-item-row" data-item="'+it.item+'" style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-left:3px solid '+(active?'var(--teal)':'transparent')+';background:'+(active?'rgba(0,198,198,.1)':'')+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">'
+      +'<div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:var(--teal)">'+(it.item)+'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:'+etaColor+';flex-shrink:0">'+etaText+'</div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(it.desc||'—')+'</div>'
+      +'<div style="font-size:9px;color:var(--ink3);margin-top:2px">'+it.shipments.length+' shipment'+(it.shipments.length!==1?'s':'')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderItemDetail(itemId){
+  const panel = document.getElementById('item-detail-panel');
+  if(!itemId){
+    panel.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--ink3);text-align:center;gap:12px">'
+      +'<div style="font-size:40px;opacity:.4">📦</div>'
+      +'<div style="font-size:15px;font-weight:700;color:var(--ink2)">Click an item to see all shipments</div>'
+      +'</div>';
+    return;
+  }
+  const all = getAllItems();
+  const it = all.find(x=>x.item===itemId);
+  if(!it){ panel.innerHTML='<div style="padding:20px;color:var(--red)">Item not found</div>'; return; }
+
+  const sorted = [...it.shipments].sort((a,b)=>{
+    if(a.status==='arrived'&&b.status!=='arrived') return 1;
+    if(b.status==='arrived'&&a.status!=='arrived') return -1;
+    return (a.eta||'9999')>(b.eta||'9999')?1:-1;
+  });
+  const totalQty   = it.shipments.reduce((s,x)=>s+(parseFloat(x.qty)||0),0);
+  const transitQty = it.shipments.filter(x=>x.status==='transit'||x.status==='delayed'||x.status==='customs').reduce((s,x)=>s+(parseFloat(x.qty)||0),0);
+  const soonest    = it.shipments.filter(x=>x.status!=='arrived'&&x.eta).sort((a,b)=>a.eta>b.eta?1:-1)[0];
+  const d = soonest ? daysUntil(soonest.eta) : null;
+  const etaClr = d===null?'var(--ink2)':d<0?'var(--red)':d<=14?'var(--amber)':'var(--teal)';
+
+  let rows = '';
+  sorted.forEach(function(ship){
+    const sc = STATUS[ship.status]||STATUS.transit;
+    const ec = etaCls(ship.eta,ship.status);
+    const ecClr = ec==='red'?'var(--red)':ec==='amber'?'var(--amber)':ec==='green'?'var(--green)':'var(--teal)';
+    rows += '<div class="iv-ship-row" data-sid="'+ship.shipId+'" style="border-bottom:1px solid var(--border)">'
+      +'<div class="iv-ship-hdr" data-sid="'+ship.shipId+'" style="padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:7px">'
+      +'<span style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:700;color:#fff">'+(ship.container||'—')+'</span>'
+      +'<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:rgba(255,255,255,.08);color:var(--ink2)">'+sc.label+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+(ship.vendor||'—')+(ship.po?' · PO '+ship.po:'')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-size:13px;font-weight:800;color:'+ecClr+'">'+etaLbl(ship.eta,ship.status)+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">qty: '+(ship.qty||0).toLocaleString()+'</div>'
+      +'</div>'
+      +'<div class="iv-arrow" style="font-size:16px;color:var(--ink3);flex-shrink:0;width:20px;text-align:center">▸</div>'
+      +'</div>'
+      +'<div class="iv-ship-detail" style="display:none"></div>'
+      +'</div>';
+  });
+
+  panel.innerHTML =
+    '<div style="background:linear-gradient(135deg,var(--mid),var(--panel2));border-radius:var(--radius);padding:16px 18px;margin-bottom:14px">'
+    +'<div style="font-family:JetBrains Mono,monospace;font-size:20px;font-weight:800;color:#fff">'+it.item+'</div>'
+    +'<div style="font-size:12px;color:var(--ink2);margin-top:3px">'+(it.desc||'—')+'</div>'
+    +(soonest?'<div style="margin-top:8px;font-size:13px;font-weight:700;color:'+etaClr+'">Next ETA: '+etaLbl(soonest.eta,soonest.status)+'</div>':'')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px"><div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Shipments</div><div style="font-size:22px;font-weight:800;color:#fff">'+it.shipments.length+'</div></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px"><div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Total Qty</div><div style="font-size:22px;font-weight:800;color:var(--teal)">'+totalQty.toLocaleString()+'</div></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px"><div style="font-size:9px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">On the Way</div><div style="font-size:22px;font-weight:800;color:var(--amber)">'+transitQty.toLocaleString()+'</div></div>'
+    +'</div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">'
+    +'<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--ink2)">All Shipments containing '+it.item+' — click row to expand</div>'
+    +rows
+    +'</div>';
+}
+
+function expandShipDetail(hdrEl){
+  const shipId  = hdrEl.dataset.sid;
+  const rowEl   = hdrEl.closest('.iv-ship-row');
+  if(!rowEl) return;
+  const detail  = rowEl.querySelector('.iv-ship-detail');
+  const arrow   = hdrEl.querySelector('.iv-arrow');
+  const isOpen  = detail && detail.style.display !== 'none';
+
+  // Close all
+  document.querySelectorAll('.iv-ship-detail').forEach(d=>d.style.display='none');
+  document.querySelectorAll('.iv-ship-hdr').forEach(h=>h.style.background='');
+  document.querySelectorAll('.iv-arrow').forEach(a=>a.textContent='▸');
+
+  if(isOpen) return;
+
+  hdrEl.style.background = 'rgba(0,198,198,.06)';
+  if(arrow) arrow.textContent = '▾';
+  if(!detail) return;
+  detail.style.display = 'block';
+
+  const ship = shipments.find(s=>String(s.id)===String(shipId));
+  if(!ship){
+    detail.innerHTML='<div style="padding:12px 14px;color:var(--amber);font-size:12px">Shipment not found ('+shipId+')</div>';
+    return;
+  }
+
+  const results = calcAllItems(ship);
+  const items   = ship.items||[];
+  const stConf  = STATUS[ship.status]||STATUS.transit;
+  const ec      = etaCls(ship.eta,ship.status);
+  const ecClr   = ec==='red'?'var(--red)':ec==='amber'?'var(--amber)':ec==='green'?'var(--green)':'var(--teal)';
+
+  let tableRows = '';
+  items.forEach(function(it,i){
+    const r = results[i];
+    tableRows +=
+      '<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:6px 8px;font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:var(--teal)">'+it.item+'</td>'
+      +'<td style="padding:6px 8px;font-size:11px;color:var(--ink2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(it.desc||'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--ink)">'+(it.qty||0).toLocaleString()+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--ink)">'+(it.cost?'$'+parseFloat(it.cost).toFixed(4):'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:var(--teal)">'+(r?'$'+r.landedCost.toFixed(4):'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-family:JetBrains Mono,monospace;font-size:11px;color:var(--green)">'+(r&&r.sellPrice?'$'+r.sellPrice.toFixed(4):'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;color:'+(r&&r.marginPct>=30?'var(--green)':r&&r.marginPct>=20?'var(--amber)':'var(--red)')+';">'+(r?r.marginPct.toFixed(1)+'%':'—')+'</td>'
+      +'</tr>';
+  });
+
+  detail.innerHTML =
+    '<div style="padding:14px;background:rgba(0,0,0,.2)">'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">Status</div><div style="font-size:11px;font-weight:700;color:#fff">'+stConf.label+'</div></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">ETA</div><div style="font-size:12px;font-weight:800;color:'+ecClr+'">'+etaLbl(ship.eta,ship.status)+'</div></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">PO #</div><div style="font-size:11px;font-weight:700;color:#fff">'+(ship.po||'—')+'</div></div>'
+    +'<div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase;margin-bottom:3px">Shipping</div><div style="font-size:12px;font-weight:800;color:var(--teal)">'+(ship.shippingCost?fmt$(ship.shippingCost):'—')+'</div></div>'
+    +'</div>'
+    +(items.length
+      ?'<div style="overflow-x:auto;margin-bottom:10px"><table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr style="background:var(--mid)">'
+        +'<th style="padding:6px 8px;text-align:left;font-size:9px;color:var(--ink3);text-transform:uppercase">Item</th>'
+        +'<th style="padding:6px 8px;text-align:left;font-size:9px;color:var(--ink3);text-transform:uppercase">Description</th>'
+        +'<th style="padding:6px 8px;text-align:right;font-size:9px;color:var(--ink3);text-transform:uppercase">Qty</th>'
+        +'<th style="padding:6px 8px;text-align:right;font-size:9px;color:var(--ink3);text-transform:uppercase">Cost/ctn</th>'
+        +'<th style="padding:6px 8px;text-align:right;font-size:9px;color:var(--ink3);text-transform:uppercase">Landed</th>'
+        +'<th style="padding:6px 8px;text-align:right;font-size:9px;color:var(--ink3);text-transform:uppercase">Sell Price</th>'
+        +'<th style="padding:6px 8px;text-align:right;font-size:9px;color:var(--ink3);text-transform:uppercase">Margin</th>'
+        +'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
+      :'<div style="color:var(--ink3);font-size:11px;margin-bottom:10px">No items listed.</div>')
+    +'<button data-sid="'+ship.id+'" class="iv-open-full" style="padding:6px 14px;background:linear-gradient(135deg,var(--teal-dk),#006f7a);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">Open Full Shipment →</button>'
+    +'</div>';
+}
+
+
+
+// ── Google Sheets Sync ────────────────────────────────────────────────────
+function showSyncModal(){
+  try{ const u=localStorage.getItem('sct_sync_url'); if(u) document.getElementById('sync-url').value=u; }catch(e){}
+  openModal('modal-sync');
+}
+function saveSyncUrl(){
+  try{ localStorage.setItem('sct_sync_url', document.getElementById('sync-url').value.trim()); }catch(e){}
+}
+function setSyncStatus(msg,color){
+  const el=document.getElementById('sync-status');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--ink3)'; }
+}
+
+async function syncSave(){
+  const url=document.getElementById('sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL first.'); return; }
+  setSyncStatus('Saving...','#fcd34d');
+  try{
+    // Bundle shipments + item sheet together
+    const payload = {
+      shipments,
+      itemSheet: sheetRows||null,
+      itemCols:  sheetCols||null,
+      itemName:  localStorage.getItem('sct_sheet_name')||'',
+    };
+    const json=JSON.stringify(payload);
+    const CHUNK=49000;
+    const chunks=[];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const itemMsg = sheetRows ? ' + '+sheetRows.length+' item sheet rows' : '';
+    setSyncStatus('✓ Saved '+shipments.length+' shipments'+itemMsg+' — '+new Date().toLocaleTimeString(),'#86efac');
+  }catch(err){ setSyncStatus('✗ '+err.message,'#fca5a5'); }
+}
+
+async function syncLoad(){
+  const url=document.getElementById('sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL first.'); return; }
+  setSyncStatus('Loading...','#fcd34d');
+  try{
+    const res=await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const data=JSON.parse(text);
+    if(data.error) throw new Error(data.error);
+
+    // New format: {shipments, itemSheet, itemCols, itemName}
+    if(data.shipments){
+      shipments = data.shipments;
+      if(data.itemSheet && data.itemSheet.length && data.itemCols){
+        sheetRows = data.itemSheet;
+        sheetCols = data.itemCols;
+        const name = data.itemName||'';
+        try{ localStorage.setItem('sct_sheet_name', name); }catch(e){}
+        idbSave('item_sheet', sheetRows).catch(()=>{});
+        idbSave('item_sheet_cols', sheetCols).catch(()=>{});
+        const el=document.getElementById('item-master-status');
+        if(el) el.innerHTML='<span style="color:var(--green)">✓ '+sheetRows.length+' items'+(name?' · '+name:'')+' (from sync)</span>'
+          +(sheetCols.cbmCol?' · CBM ✓':'')+(sheetCols.tariffCol?' · Tariff ✓':'');
+      }
+    } else {
+      // Legacy: plain array
+      const loaded=Array.isArray(data)?data:[];
+      if(!loaded.length) throw new Error('No shipments found. Save first.');
+      shipments=loaded;
+    }
+
+    persist(); updateKPIs(); renderList();
+    activeItemId=null;
+    if(activeId){ renderRight(); }
+    closeModal('modal-sync');
+    const itemMsg = sheetRows ? ' + item sheet' : '';
+    setSyncStatus('✓ Loaded '+shipments.length+' shipments'+itemMsg+' — '+new Date().toLocaleTimeString(),'#86efac');
+  }catch(err){ setSyncStatus('✗ '+err.message,'#fca5a5'); }
+}
+
+// Manual ship/unit input handler (uses data attrs to avoid quote issues)
+document.addEventListener('change', e=>{
+  const inp = e.target.closest('.smu-input');
+  if(inp) updateItemField(inp.dataset.shipid, inp.dataset.itemid, 'shipManual', inp.value);
+});
+
+// Event delegation for item view
+document.addEventListener('click', e=>{
+  // Item row in left list → select item
+  const itemRow = e.target.closest('.iv-item-row');
+  if(itemRow){
+    activeItemId = itemRow.dataset.item;
+    renderItemList();
+    renderItemDetail(activeItemId);
+    return;
+  }
+  // Shipment row header → expand detail
+  const shipHdr = e.target.closest('.iv-ship-hdr');
+  if(shipHdr){ expandShipDetail(shipHdr); return; }
+  // Open full shipment button
+  const openBtn = e.target.closest('.iv-open-full');
+  if(openBtn){ toggleItemView(); selectShipment(openBtn.dataset.sid); return; }
+});
+
+
+
+
+
+// Restore sync URL
+try{ const u=localStorage.getItem('sct_sync_url'); if(u&&document.getElementById('sync-url')) document.getElementById('sync-url').value=u; }catch(e){}
+
+function clearShipManual(shipId, itemId){
+  const ship = shipments.find(x=>String(x.id)===String(shipId));
+  if(!ship) return;
+  const it = ship.items?.find(i=>String(i.id)===String(itemId));
+  if(!it) return;
+  it.shipManual = null;
+  persist();
+  if(activeTab==='costs'||activeTab==='summary') renderTab();
+}
+
+try{ hydrate(); updateKPIs(); renderList(); }catch(e){ console.warn("desktop init:",e); }
+
+// Restore item sheet from IndexedDB
+(async()=>{
+  try{
+    const rows = await idbLoad('item_sheet');
+    const cols = await idbLoad('item_sheet_cols');
+    if(rows && rows.length && cols){
+      sheetRows = rows;
+      sheetCols = cols;
+      const name = localStorage.getItem('sct_sheet_name')||'';
+      const el = document.getElementById('item-master-status');
+      if(el){
+        el.innerHTML = '<span style="color:var(--green)">\u2713 '+rows.length+' items'+(name?' · '+name:'')+' (saved)</span>'
+          +(cols.cbmCol?' · CBM \u2713':'')+(cols.tariffCol?' · Tariff \u2713':'');
+      }
+      // Apply CBM + tariff to all existing items immediately after restore
+      applyItemSheetToShipments(rows, cols);
+    }
+  }catch(e){ console.warn('sheet restore:',e); }
+})();
+
+
+
+
+// ── Mobile UI ──────────────────────────────────────────────────────────────
+let mShipFilter = 'all';
+
+function mShowScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const map={'scr-ships':'nav-ships','scr-items':'nav-items','scr-upload':'nav-upload'};
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(map[id]) document.getElementById(map[id]).classList.add('active');
+  if(id==='scr-ships') mRenderShips();
+  if(id==='scr-items') mRenderItems();
+  if(id==='scr-upload') mUpdateUploadStatus();
+  window.scrollTo(0,0);
+}
+
+function mSetShipFilter(f,el){
+  mShipFilter=f;
+  document.querySelectorAll('#scr-ships .pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  mRenderShips();
+}
+
+function mEtaColor(eta,status){
+  if(status==='arrived') return '#22c55e';
+  if(!eta) return '#94a8c4';
+  const d=daysUntil(eta);
+  return d<0?'#ef4444':d<=14?'#f59e0b':'#00c6c6';
+}
+
+function mUpdateMargin(shipId, val){
+  const ship = shipments.find(s=>String(s.id)===String(shipId));
+  if(!ship) return;
+  ship.quoteMargin = parseFloat(val)||0;
+  persist();
+  // Re-render the detail view
+  mOpenShip(shipId);
+}
+
+function mRenderShips(){
+  const q=(document.getElementById('m-ship-search').value||'').toLowerCase();
+  let list=[...shipments];
+  if(mShipFilter!=='all') list=list.filter(s=>s.status===mShipFilter||(mShipFilter==='transit'&&s.status==='customs'));
+  if(q) list=list.filter(s=>(s.container||'').toLowerCase().includes(q)||(s.vendor||'').toLowerCase().includes(q)||(s.po||'').toLowerCase().includes(q));
+  list.sort((a,b)=>{
+    if(a.status==='arrived'&&b.status!=='arrived') return 1;
+    if(b.status==='arrived'&&a.status!=='arrived') return -1;
+    return (a.eta||'9999')>(b.eta||'9999')?1:-1;
+  });
+  document.getElementById('m-kpi-ships').textContent=shipments.length;
+  document.getElementById('m-ship-count').textContent=list.length+' shipments';
+  const st=STATUS||{};
+  const el=document.getElementById('m-ship-list');
+  if(!list.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--ink3)">No shipments found</div>';return;}
+  el.innerHTML=list.map(ship=>{
+    const sc=st[ship.status]||{label:ship.status,color:'#94a8c4'};
+    const etaClr=mEtaColor(ship.eta,ship.status,ship.pu);
+    const etaTxt=ship.status==='scheduled'&&ship.pu?'📅 '+ship.pu:ship.status==='arrived'?'Arrived':etaLbl(ship.eta,ship.status);
+    const results=calcAllItems(ship);
+    const totalLanded=results.reduce((s,r)=>s+(r.landedCost||0),0);
+    return '<div class="ship-card" data-sid="'+ship.id+'">'
+      +'<div class="ship-card-accent" style="background:'+etaClr+'"></div>'
+      +'<div class="ship-card-top">'
+      +'<div><div class="ship-card-num" style="color:#1e3a5f">'+(ship.container||'—')+'</div>'
+      +'<div class="ship-card-vendor" style="color:#64748b">'+(ship.vendor||'')+(ship.po?' · PO '+ship.po:'')+'</div></div>'
+      +'<div style="text-align:right"><div class="ship-card-eta" style="color:'+etaClr+'">'+etaTxt+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+(ship.items||[]).length+' items'+(()=>{const tq=(ship.items||[]).reduce((s,i)=>s+(parseFloat(i.qty)||0),0);return tq>0?' · '+tq.toLocaleString()+' units/ctn':'';})()+'</div></div>'
+      +'</div>'
+      +'<div class="ship-card-bottom">'
+      +'<span class="ship-card-status" style="background:'+sc.color+'22;color:'+sc.color+'">'+sc.label+'</span>'
+      +'<span style="color:var(--ink3);font-size:18px">›</span>'
+      +'</div></div>';
+  }).join('');
+  el.querySelectorAll('.ship-card').forEach(card=>{
+    card.addEventListener('click',()=>mOpenShip(card.dataset.sid));
+  });
+}
+
+function mOpenShip(id){
+  const ship=shipments.find(s=>String(s.id)===String(id));
+  if(!ship) return;
+  const sc=STATUS[ship.status]||{label:ship.status,color:'#94a8c4'};
+  const etaClr=mEtaColor(ship.eta,ship.status,ship.pu);
+  document.getElementById('m-det-ship-num').textContent=ship.container||'—';
+  document.getElementById('m-det-ship-status').textContent=sc.label+(ship.eta?' · '+etaLbl(ship.eta,ship.status):'');
+  const results=calcAllItems(ship);
+  const totalShip=results.reduce((s,r)=>s+(r.shipPerCtn||0),0);
+  const totalTariff=results.reduce((s,r)=>s+(r.tariffPerCtn||0),0);
+  const totalLanded=results.reduce((s,r)=>s+(r.landedCost||0),0);
+  const margin=parseFloat(ship.quoteMargin)||0;
+
+  let html='';
+  // Cost summary
+  html+='<div class="cost-strip">'
+    +'<div class="cost-box"><div class="cost-box-val">'+(ship.shippingCost?'$'+parseFloat(ship.shippingCost).toFixed(0):'—')+'</div><div class="cost-box-lbl">Freight</div></div>'
+    +'<div class="cost-box"><div class="cost-box-val" style="font-size:16px;color:'+etaClr+'">'+etaLbl(ship.eta,ship.status)+'</div><div class="cost-box-lbl">ETA</div></div>'
+    +'<div class="cost-box"><div class="cost-box-val">'+(margin>0?margin+'%':'—')+'</div><div class="cost-box-lbl">Margin</div></div>'
+    +'</div>'
+    // Margin dropdown + settings row
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 12px 0">'
+    +'<div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:10px 12px">'
+    +'<div style="font-size:9px;color:var(--ink3);text-transform:uppercase;font-weight:700;margin-bottom:5px">Quote Margin</div>'
+    +'<select id="m-margin-sel-'+ship.id+'" onchange="mUpdateMargin(\''+ship.id+'\',this.value)" style="width:100%;background:#f8fafc;border:1px solid rgba(0,0,0,.1);border-radius:6px;padding:5px 8px;font-size:12px;font-family:Inter,sans-serif;color:var(--ink)">'
+    +[0,5,10,15,20,25,30,33,35,40,42,45,50].map(v=>'<option value="'+v+'"'+(margin===v?' selected':'')+'>'+( v===0?'No markup':v+'%')+'</option>').join('')
+    +'</select></div>'
+    +'<div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:10px 12px">'
+    +'<div style="font-size:9px;color:var(--ink3);text-transform:uppercase;font-weight:700;margin-bottom:5px">Default Tariff</div>'
+    +'<div style="font-size:13px;font-weight:700;color:#d97706">'+(parseFloat(ship.defaultTariff)||0)+'%</div>'
+    +'<div style="font-size:9px;color:var(--ink3)">'+( ship.shippingCost?'$'+parseFloat(ship.shippingCost).toFixed(0)+' freight':'No freight set')+'</div>'
+    +'</div>'
+    +'</div>';
+  // Info grid
+  html+='<div class="det-section"><div class="det-section-title">Shipment Info</div>'
+    +'<div class="det-card"><div class="det-info-grid">'
+    +'<div class="det-info-cell"><div class="det-info-lbl">ETA</div><div class="det-info-val" style="color:'+etaClr+'">'+etaLbl(ship.eta,ship.status)+'</div></div>'
+    +'<div class="det-info-cell"><div class="det-info-lbl">ETD</div><div class="det-info-val">'+(ship.etd||'—')+'</div></div>'
+    +'<div class="det-info-cell"><div class="det-info-lbl">Vendor</div><div class="det-info-val" style="font-size:11px">'+(ship.vendor||'—')+'</div></div>'
+    +'<div class="det-info-cell"><div class="det-info-lbl">PO #</div><div class="det-info-val">'+(ship.po||'—')+'</div></div>'
+    +'<div class="det-info-cell"><div class="det-info-lbl">POL</div><div class="det-info-val" style="font-size:11px">'+(ship.pol||'—')+'</div></div>'
+    +'<div class="det-info-cell"><div class="det-info-lbl">POD</div><div class="det-info-val" style="font-size:11px">'+(ship.pod||'—')+'</div></div>'
+      +'<div class="det-info-cell"><div class="det-info-lbl">Pickup Date</div><div class="det-info-val" style="color:#7c3aed;font-weight:700">'+(ship.pu?ship.pu:'—')+'</div></div>'
+    +'</div></div></div>';
+  // Items
+  if((ship.items||[]).length){
+    html+='<div class="det-section"><div class="det-section-title">Items & Costs</div>'
+      +'<div class="det-card">';
+    (ship.items||[]).forEach((it,i)=>{
+      const r=results[i];
+      const sellClr=r&&r.marginPct>=30?'#22c55e':r&&r.marginPct>=20?'#f59e0b':'#ef4444';
+      html+='<div class="item-row">'
+        +'<div class="item-row-top">'
+        +'<div class="item-code-m">'+it.item+'</div>'
+        +'<div class="item-landed">'+(r?'$'+r.landedCost.toFixed(2):'—')+'</div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--ink3);margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(it.desc||'')+'</div>'
+        +'<div class="item-row-bottom">'
+        +'<span>Cost: $'+(it.cost||0)+'</span>'
+        +'<span>Qty/ctn: '+(it.qty||'—')+'</span>'
+        +'<span style="color:#d97706">Tariff: $'+(r?r.tariffPerCtn.toFixed(2):'—')+'</span>'
+        +'<span>Ship: $'+(r?r.shipPerCtn.toFixed(2):'—')+'</span>'
+        +'</div>'
+        +'<div class="item-row-bottom" style="margin-top:3px">'
+        +'<span>Landed: <strong style="color:#1e3a5f">$'+(r?r.landedCost.toFixed(2):'—')+'</strong></span>'
+        +'<span style="color:'+sellClr+';font-weight:700">Sell: '+(r&&r.sellPrice>0?'$'+r.sellPrice.toFixed(2):'—')+'</span>'
+        +'<span style="color:'+sellClr+'">'+( r?r.marginPct.toFixed(1)+'%':'—')+'</span>'
+        +'</div></div>';
+    });
+    html+='</div></div>';
+  }
+  document.getElementById('m-ship-det-body').innerHTML=html;
+  mShowScreen('scr-ship-det');
+
+}
+
+function mRenderItems(){
+  const q=(document.getElementById('m-item-search').value||'').toLowerCase().trim();
+  const map={};
+  shipments.forEach(ship=>{
+    (ship.items||[]).forEach(it=>{
+      if(!it.item) return;
+      if(!map[it.item]) map[it.item]={item:it.item,desc:it.desc||'',ships:[]};
+      if(it.desc&&!map[it.item].desc) map[it.item].desc=it.desc;
+      const inTransit=ship.status==='transit'||ship.status==='delayed'||ship.status==='customs';
+      map[it.item].ships.push({id:ship.id,container:ship.container,eta:ship.eta,status:ship.status,inTransit});
+    });
+  });
+  let list=Object.values(map).sort((a,b)=>a.item.localeCompare(b.item));
+  if(q) list=list.filter(it=>it.item.toLowerCase().includes(q)||(it.desc||'').toLowerCase().includes(q));
+  const el=document.getElementById('m-item-list');
+  if(!list.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--ink3)">No items found</div>';return;}
+  el.innerHTML=list.map(it=>{
+    const soonest=it.ships.filter(s=>s.inTransit&&s.eta).sort((a,b)=>a.eta>b.eta?1:-1)[0];
+    const etaClr=soonest?mEtaColor(soonest.eta,soonest.status):'var(--ink3)';
+    const etaTxt=soonest?etaLbl(soonest.eta,soonest.status):'';
+    return '<div class="ship-card" data-item="'+it.item+'" style="margin-bottom:8px">'
+      +'<div class="ship-card-top">'
+      +'<div><div class="ship-card-num" style="color:var(--teal)">'+it.item+'</div>'
+      +'<div class="ship-card-vendor" style="color:#64748b">'+(it.desc||'—')+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:13px;font-weight:800;color:'+etaClr+'">'+etaTxt+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+it.ships.length+' shipment'+(it.ships.length!==1?'s':'')+'</div></div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:6px;display:flex;gap:5px;align-items:center">'
+      +'<span style="color:var(--ink3)">›</span> tap to see all shipments'
+      +'</div></div>';
+  }).join('');
+  el.querySelectorAll('.ship-card').forEach(card=>{
+    card.addEventListener('click',()=>mOpenItem(card.dataset.item));
+  });
+}
+
+function mOpenItem(itemId){
+  const map={};
+  shipments.forEach(ship=>{
+    (ship.items||[]).forEach((it,i)=>{
+      if(it.item!==itemId) return;
+      if(!map[itemId]) map[itemId]={item:itemId,desc:it.desc||'',ships:[]};
+      const results=calcAllItems(ship);
+      map[itemId].ships.push({ship,it,r:results[i]});
+    });
+  });
+  const data=map[itemId];
+  if(!data) return;
+  document.getElementById('m-item-det-code').textContent=data.item;
+  document.getElementById('m-item-det-desc').textContent=data.desc;
+  let html='';
+  data.ships.sort((a,b)=>{
+    if(a.ship.status==='arrived'&&b.ship.status!=='arrived') return 1;
+    if(b.ship.status==='arrived'&&a.ship.status!=='arrived') return -1;
+    return (a.ship.eta||'9999')>(b.ship.eta||'9999')?1:-1;
+  }).forEach(({ship,it,r})=>{
+    const etaClr=mEtaColor(ship.eta,ship.status,ship.pu);
+    const sc=STATUS[ship.status]||{label:ship.status,color:'#94a8c4'};
+    const sellClr=r&&r.marginPct>=30?'#22c55e':r&&r.marginPct>=20?'#f59e0b':'#ef4444';
+    html+='<div class="ship-card" data-sid="'+ship.id+'" style="margin-bottom:8px">'
+      +'<div class="ship-card-top">'
+      +'<div><div class="ship-card-num" style="color:#1e3a5f">'+(ship.container||'—')+'</div>'
+      +'<div class="ship-card-vendor" style="color:#64748b">'+(ship.vendor||'')+(ship.po?' · PO '+ship.po:'')+'</div></div>'
+      +'<div style="text-align:right"><div style="font-size:13px;font-weight:800;color:'+etaClr+'">'+etaLbl(ship.eta,ship.status)+'</div></div>'
+      +'</div>'
+      +'<div style="margin-top:8px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px">'
+      +'<div style="text-align:center"><div style="font-size:9px;color:var(--ink3)">Cost</div><div style="font-size:11px;font-weight:700;color:#1e3a5f;font-family:monospace">$'+(it.cost||0)+'</div></div>'
+      +'<div style="text-align:center"><div style="font-size:9px;color:var(--ink3)">Qty/ctn</div><div style="font-size:11px;font-weight:700;color:#1e3a5f">'+(it.qty||'—')+'</div></div>'
+      +'<div style="text-align:center"><div style="font-size:9px;color:var(--ink3)">Tariff</div><div style="font-size:11px;font-weight:700;color:#d97706;font-family:monospace">'+(r?'$'+r.tariffPerCtn.toFixed(2):'—')+'</div></div>'
+      +'<div style="text-align:center"><div style="font-size:9px;color:var(--ink3)">Ship</div><div style="font-size:11px;font-weight:700;color:var(--teal);font-family:monospace">'+(r?'$'+r.shipPerCtn.toFixed(2):'—')+'</div></div>'
+      +'<div style="text-align:center"><div style="font-size:9px;color:var(--ink3)">Landed</div><div style="font-size:11px;font-weight:700;color:#1e3a5f;font-family:monospace">'+(r?'$'+r.landedCost.toFixed(2):'—')+'</div></div>'
+      +'</div>'
+      +'<div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:11px;font-weight:700;color:'+sellClr+'">Sell: '+(r&&r.sellPrice>0?'$'+r.sellPrice.toFixed(2):'—')+' ('+( r?r.marginPct.toFixed(1)+'%':'—')+')</span>'
+      +'<span class="ship-card-status" style="background:'+sc.color+'22;color:'+sc.color+';padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700">'+sc.label+'</span>'
+      +'</div>'
+      +'<div style="margin-top:4px;font-size:10px;color:var(--ink3);text-align:right">tap to open shipment ›</div>'
+      +'</div>';
+  });
+  document.getElementById('m-item-det-body').innerHTML=html||'<div style="padding:24px;text-align:center;color:var(--ink3)">No shipments found</div>';
+  document.getElementById('m-item-det-body').querySelectorAll('.ship-card').forEach(card=>{
+    card.addEventListener('click',()=>mOpenShip(card.dataset.sid));
+  });
+  mShowScreen('scr-item-det');
+}
+
+function mUpdateUploadStatus(){
+  const el=document.getElementById('m-item-sheet-status');
+  if(el&&sheetRows&&sheetRows.length){
+    const name=localStorage.getItem('sct_sheet_name')||'';
+    el.innerHTML='<span style="color:#22c55e">✓ '+sheetRows.length+' items loaded'+(name?' · '+name:'')+'</span>';
+  }
+  const el2=document.getElementById('m-ship-upload-status');
+  if(el2) el2.innerHTML='<span style="color:var(--ink3)">'+shipments.length+' shipments loaded</span>';
+}
+
+// Patch alert function for mobile
+const _origAlert=window.alert;
+window.alert=function(msg){
+  mUpdateUploadStatus();
+  mPopulateDataLists();
+  mRenderShips();
+  _origAlert(msg);
+};
+
+// Restore sync URL
+try{
+  const savedUrl = localStorage.getItem('sct_sync_url')||'';
+  const urlEl = document.getElementById('m-sync-url');
+  if(urlEl&&savedUrl) urlEl.value = savedUrl;
+}catch(e){}
+
+mPopulateDataLists();
+setTimeout(()=>{ mRenderShips(); mRenderItems(); mUpdateUploadStatus(); },200);
+</script>
+
+<script>
+// ── PWA: Inject manifest ──────────────────────────────────────────────────
+(function(){
+  const manifest = {"name": "Shipment Tracker", "short_name": "Shipments", "description": "Track shipments, costs, and container status on the go", "start_url": ".", "display": "standalone", "orientation": "portrait", "background_color": "#f0f4f8", "theme_color": "#1e3a5f", "categories": ["business", "productivity"], "icons": [{"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231e3a5f'/%3E%3Ctext x='256' y='330' font-size='280' text-anchor='middle' fill='white'%3E%F0%9F%9A%A2%3C/text%3E%3C/svg%3E", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}]};
+  const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  document.getElementById('pwa-manifest').href = url;
+})();
+
+// ── PWA: Install prompt ───────────────────────────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  // Show install banner after 3 seconds if not already installed
+  setTimeout(() => {
+    if(_installPrompt && !window.matchMedia('(display-mode: standalone)').matches){
+      showInstallBanner();
+    }
+  }, 3000);
+});
+
+function showInstallBanner(){
+  if(document.getElementById('pwa-install-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'pwa-install-banner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:12px;right:12px;background:#1e3a5f;color:#fff;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);font-family:Inter,system-ui,sans-serif';
+  banner.innerHTML = `
+    <span style="font-size:28px">🚢</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700">Shipment Tracker</div>
+      <div style="font-size:11px;opacity:.8">Add to your home screen</div>
+    </div>
+    <button onclick="installPWA()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Install</button>
+    <button onclick="document.getElementById('pwa-install-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px">✕</button>`;
+  document.body.appendChild(banner);
+}
+
+function installPWA(){
+  if(!_installPrompt) {
+    // iOS fallback
+    alert('To install: tap the Share button (⬆) then "Add to Home Screen"');
+    return;
+  }
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r => {
+    if(r.outcome === 'accepted') document.getElementById('pwa-install-banner')?.remove();
+    _installPrompt = null;
+  });
+}
+</script>
+</body>
+</html>

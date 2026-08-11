@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fleet Management — Office</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1923;--surface:#1a2d42;--surface2:#243d5a;--surface3:#2d4a6b;
+  --blue:#0ea5e9;--amber:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#a855f7;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono','Courier New',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+/* Header */
+.header{background:var(--surface2);border-bottom:1px solid var(--border2);padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:200}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{font-size:20px;font-weight:800;color:var(--blue);letter-spacing:-.5px}
+.logo span{color:var(--text2);font-weight:400}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);border:none;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#38bdf8}
+.btn-ghost{background:rgba(255,255,255,.07);color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.btn-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-red:hover{background:rgba(239,68,68,.25)}
+/* Layout */
+.layout{display:flex;flex:1;overflow:hidden;height:calc(100vh - 58px)}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;padding:16px 0}
+.nav-label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:0 16px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text2);font-weight:500;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.active{background:rgba(14,165,233,.1);color:var(--blue);border-left-color:var(--blue)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px}
+.main{flex:1;overflow-y:auto;padding:24px}
+/* Notification banner */
+.notif-bar{display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:12px 16px;margin-bottom:18px;position:relative;animation:pulse-border 2s infinite}
+.notif-bar.amber{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4)}
+.notif-bar.show{display:flex;align-items:flex-start;gap:12px}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.3)}50%{box-shadow:0 0 0 4px rgba(239,68,68,.1)}}
+.notif-icon{font-size:22px;flex-shrink:0}
+.notif-content{flex:1}
+.notif-title{font-weight:700;font-size:13px;color:var(--red);margin-bottom:3px}
+.notif-bar.amber .notif-title{color:var(--amber)}
+.notif-msg{font-size:12px;color:var(--text2);line-height:1.5}
+.notif-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0}
+/* KPI strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-top:3px solid transparent}
+.kpi.blue{border-top-color:var(--blue)}
+.kpi.green{border-top-color:var(--green)}
+.kpi.amber{border-top-color:var(--amber)}
+.kpi.red{border-top-color:var(--red)}
+.kpi.purple{border-top-color:var(--purple)}
+.kpi-val{font-size:26px;font-weight:800;font-family:var(--mono);margin-bottom:2px}
+.kpi-lbl{font-size:10px;color:var(--text2);text-transform:uppercase;font-weight:600;letter-spacing:.06em}
+/* Section */
+.section-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-title span{font-size:11px;color:var(--text3);font-weight:400}
+/* Vehicle cards */
+.vehicle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:28px}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;border-left:4px solid var(--green);overflow:hidden;transition:border-color .2s}
+.vcard.warn{border-left-color:var(--amber)}
+.vcard.danger{border-left-color:var(--red);animation:pulse-card 2s infinite}
+@keyframes pulse-card{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(239,68,68,.2)}}
+.vcard-header{padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--border)}
+.vcard-plate{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text);letter-spacing:2px;background:var(--surface2);padding:3px 10px;border-radius:5px;border:1px solid var(--border2)}
+.vcard-name{font-size:11px;color:var(--text2);margin-top:4px}
+.status-pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px}
+.pill-ok{background:rgba(34,197,94,.15);color:var(--green)}
+.pill-warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.pill-danger{background:rgba(239,68,68,.15);color:var(--red)}
+.vcard-body{padding:12px 16px}
+.vcard-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.vcard-label{font-size:10px;color:var(--text3);text-transform:uppercase;font-weight:600;letter-spacing:.05em}
+.vcard-val{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.vcard-val.amber{color:var(--amber)}
+.vcard-val.red{color:var(--red)}
+.vcard-val.green{color:var(--green)}
+.progress-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width .3s}
+.vcard-actions{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.vcard-btn{flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:rgba(255,255,255,.04);color:var(--text2);font-family:var(--font);text-align:center;transition:all .15s}
+.vcard-btn:hover{background:rgba(255,255,255,.1);color:var(--text)}
+.vcard-btn.primary{background:rgba(14,165,233,.15);color:var(--blue);border-color:rgba(14,165,233,.3)}
+/* Damage alerts */
+.damage-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.damage-card{background:var(--surface);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start;border-left:4px solid var(--red)}
+.damage-card.resolved{border-left-color:var(--green);opacity:.6}
+.damage-photo{width:80px;height:60px;border-radius:7px;object-fit:cover;background:var(--surface2);flex-shrink:0;cursor:pointer}
+.damage-photo-placeholder{width:80px;height:60px;border-radius:7px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.damage-info{flex:1}
+.damage-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.damage-meta{font-size:11px;color:var(--text2);margin-bottom:6px}
+.damage-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.damage-actions{display:flex;gap:8px}
+/* Maintenance table */
+.table{width:100%;border-collapse:collapse;font-size:12px}
+.table th{text-align:left;padding:9px 14px;border-bottom:1px solid var(--border2);color:var(--text3);font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:.06em}
+.table td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+.table tr:hover td{background:rgba(255,255,255,.02)}
+.table .mono{font-family:var(--mono)}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px}
+.modal-body{padding:20px}
+.form-row{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
+.form-input{width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--blue)}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+/* Photo lightbox */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:600;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.show{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:10px}
+/* Mileage log */
+.mlog-list{display:flex;flex-direction:column;gap:6px}
+.mlog-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.mlog-vehicle{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);width:90px;flex-shrink:0}
+.mlog-miles{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)}
+.mlog-date{font-size:11px;color:var(--text3);margin-left:auto}
+.mlog-source{font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:rgba(14,165,233,.15);color:var(--blue)}
+.mlog-photo-thumb{width:36px;height:28px;border-radius:5px;object-fit:cover;cursor:pointer}
+/* Empty state */
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:12px;line-height:1.6}
+/* Tabs */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px}
+.tab-item{padding:7px 18px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border:none;background:none;font-family:var(--font);transition:all .15s}
+.tab-item.active{background:var(--surface2);color:var(--blue)}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">🚛 Fleet<span>Manager</span></div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost" onclick="syncLoad()">⬇ Load from Sheets</button>
+    <button class="btn btn-ghost" onclick="syncSave()">⬆ Save to Sheets</button>
+    <span id="sync-status" style="font-size:11px;color:var(--text3);min-width:120px;text-align:right"></span>
+    <button class="btn btn-ghost" onclick="exportData()">⬇ Export</button>
+    <button class="btn btn-primary" onclick="openAddVehicle()">+ Add Vehicle</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div style="padding:0 16px 12px;margin-bottom:8px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">OFFICE DASHBOARD</div>
+      <div style="font-size:11px;color:var(--text2)" id="sb-date"></div>
+    </div>
+    <div class="nav-label">Views</div>
+    <div class="nav-item active" onclick="showTab('overview',this)"><span class="ni">🏠</span>Overview</div>
+    <div class="nav-item" onclick="showTab('mileage',this)"><span class="ni">🛣</span>Mileage Log</div>
+    <div class="nav-item" onclick="showTab('maintenance',this)"><span class="ni">🔧</span>Maintenance<span class="nav-badge" id="nb-maint">0</span></div>
+    <div class="nav-item" onclick="showTab('damage',this)"><span class="ni">📸</span>Damage Reports<span class="nav-badge" id="nb-damage" style="background:var(--red)">0</span></div>
+    <div class="nav-item" onclick="showTab('checklist',this)"><span class="ni">☑️</span>Checklists</div>
+    <div class="nav-item" onclick="showTab('drivers',this)"><span class="ni">👤</span>Drivers</div>
+    <div style="margin-top:auto;padding:16px">
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:6px">☁️ Google Sheets Sync</div>
+      <input class="form-input" id="sync-url" placeholder="Apps Script URL" style="font-size:11px;padding:6px 10px" oninput="saveSyncUrl()">
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-ghost" style="flex:1;padding:6px;font-size:11px" onclick="syncLoad()">⬇ Load</button>
+        <button class="btn btn-primary" style="flex:1;padding:6px;font-size:11px" onclick="syncSave()">⬆ Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="main-panel">
+    <!-- Notification bar -->
+    <div class="notif-bar" id="notif-bar">
+      <div class="notif-icon" id="notif-icon">🚨</div>
+      <div class="notif-content">
+        <div class="notif-title" id="notif-title">Damage Reported</div>
+        <div class="notif-msg" id="notif-msg"></div>
+      </div>
+      <button class="notif-close" onclick="closeNotif()">✕</button>
+    </div>
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview">
+      <div class="kpi-strip" id="kpi-strip"></div>
+      <div class="section-title">Fleet Status <span id="fleet-sub"></span></div>
+      <div class="vehicle-grid" id="vehicle-grid"></div>
+    </div>
+
+    <!-- MILEAGE TAB -->
+    <div id="tab-mileage" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Mileage Log</div>
+          <div style="font-size:11px;color:var(--text3)">All odometer readings across the fleet</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="form-input" id="mlog-filter" onchange="renderMileageLog()" style="width:150px;padding:7px 10px;font-size:12px">
+            <option value="">All Vehicles</option>
+          </select>
+        </div>
+      </div>
+      <div id="mileage-log-list"></div>
+    </div>
+
+    <!-- MAINTENANCE TAB -->
+    <div id="tab-maintenance" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div class="section-title" style="margin-bottom:0">Maintenance Schedule</div>
+        <button class="btn btn-primary" onclick="openLogMaint()">+ Log Service</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="table" id="maint-table">
+          <thead>
+            <tr>
+              <th>Vehicle</th><th>Service Type</th><th>Last Done</th><th>Miles at Service</th><th>Next Due</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="maint-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CHECKLIST TAB -->
+    <div id="tab-checklist" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Driver Checklists</div>
+          <div style="font-size:11px;color:var(--text3)">Morning inspection submissions from drivers</div>
+        </div>
+        <select class="form-input" id="cl-filter-vehicle" onchange="renderChecklistLog()" style="width:160px;padding:7px 10px;font-size:12px">
+          <option value="">All Vehicles</option>
+        </select>
+      </div>
+      <div id="cl-calendar"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">All Submissions</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="table">
+          <thead><tr><th>Date</th><th>Vehicle</th><th>Driver</th><th>Items</th><th>Notes</th><th>Photo</th><th>Status</th></tr></thead>
+          <tbody id="cl-log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DRIVERS TAB -->
+    <div id="tab-drivers" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Driver Accounts</div>
+          <div style="font-size:11px;color:var(--text3)">Each driver logs in on the mobile app with their PIN</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddDriver()">+ Add Driver</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <table class="table">
+          <thead><tr><th>Name</th><th>PIN</th><th>Assigned Vehicle</th><th>Role</th><th>Last Active</th><th></th></tr></thead>
+          <tbody id="drivers-tbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:14px;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text2)">
+        💡 After adding drivers, click <strong>⬆ Save to Sheets</strong> to sync the driver list to all mobile devices. Drivers tap <strong>⬇ Load</strong> in Settings to get the latest list.
+      </div>
+    </div>
+
+    <!-- DAMAGE TAB -->
+    <div id="tab-damage" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Damage Reports</div>
+          <div style="font-size:11px;color:var(--text3)">Photos and descriptions submitted by drivers</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" id="show-resolved" onchange="renderDamage()"> Show resolved
+          </label>
+        </div>
+      </div>
+      <div class="damage-list" id="damage-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Driver Modal -->
+<div class="modal-overlay" id="modal-driver">
+  <div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-driver-title">Add Driver</div>
+      <button class="modal-close" onclick="closeModal('modal-driver')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="d-name" placeholder="Driver name">
+      </div>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">PIN (4–6 digits)</label>
+          <input class="form-input" id="d-pin" type="number" placeholder="e.g. 1234" maxlength="6" style="font-family:var(--mono);font-size:18px;letter-spacing:4px">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Role</label>
+          <select class="form-input" id="d-role">
+            <option value="driver">Driver</option>
+            <option value="supervisor">Supervisor</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:14px">
+        <label class="form-label">Assigned Vehicle (optional)</label>
+        <select class="form-input" id="d-vehicle">
+          <option value="">— Not assigned —</option>
+        </select>
+      </div>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 14px;margin-top:6px;font-size:11px;color:#92400e">
+        ⚠️ Share PINs privately with each driver. Anyone with the PIN can log in as that driver.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-driver')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDriver()">Save Driver</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal-overlay" id="modal-vehicle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-vehicle-title">Add Vehicle</div>
+      <button class="modal-close" onclick="closeModal('modal-vehicle')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">License Plate</label>
+          <input class="form-input" id="v-plate" placeholder="ABC-1234" style="font-family:var(--mono);text-transform:uppercase">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Vehicle Name / ID</label>
+          <input class="form-input" id="v-name" placeholder="Truck 1">
+        </div>
+      </div>
+      <div class="form-row-3" style="margin-top:14px">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Make</label>
+          <input class="form-input" id="v-make" placeholder="Ford">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Model</label>
+          <input class="form-input" id="v-model" placeholder="F-250">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Year</label>
+          <input class="form-input" id="v-year" placeholder="2022" type="number">
+        </div>
+      </div>
+      <div class="form-row-2" style="margin-top:14px">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Current Mileage</label>
+          <input class="form-input" id="v-miles" placeholder="45000" type="number">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Driver Assigned</label>
+          <input class="form-input" id="v-driver" placeholder="Driver name">
+        </div>
+      </div>
+      <div class="form-row-3" style="margin-top:14px">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Oil Change Every (mi)</label>
+          <input class="form-input" id="v-oil-interval" placeholder="5000" type="number" value="5000">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Inspection Due</label>
+          <input class="form-input" id="v-inspect-due" type="date">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Insurance Expires</label>
+          <input class="form-input" id="v-insurance" type="date">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-vehicle')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">Save Vehicle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log Maintenance Modal -->
+<div class="modal-overlay" id="modal-maint">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Log Service / Maintenance</div>
+      <button class="modal-close" onclick="closeModal('modal-maint')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Vehicle</label>
+        <select class="form-input" id="maint-vehicle"></select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Service Type</label>
+        <select class="form-input" id="maint-type">
+          <option>Oil Change</option>
+          <option>Tire Rotation</option>
+          <option>Brake Inspection</option>
+          <option>Annual Inspection</option>
+          <option>Transmission Service</option>
+          <option>Air Filter</option>
+          <option>Coolant Flush</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-row-2">
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Date Performed</label>
+          <input class="form-input" id="maint-date" type="date">
+        </div>
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label">Mileage at Service</label>
+          <input class="form-input" id="maint-miles" type="number" placeholder="45000">
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:14px">
+        <label class="form-label">Next Due (miles)</label>
+        <input class="form-input" id="maint-next-miles" type="number" placeholder="50000">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes</label>
+        <input class="form-input" id="maint-notes" placeholder="Shop, parts, observations...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-maint')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMaint()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Detail Modal -->
+<div class="modal-overlay" id="modal-vehicle-detail">
+  <div class="modal" style="width:600px">
+    <div class="modal-header">
+      <div class="modal-title" id="vd-title">Vehicle Detail</div>
+      <button class="modal-close" onclick="closeModal('modal-vehicle-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="vd-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-red" id="vd-delete-btn">🗑 Remove Vehicle</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-vehicle-detail')">Close</button>
+      <button class="btn btn-primary" id="vd-edit-btn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="photo">
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────
+const LS_VEHICLES = 'fleet_vehicles_v1';
+const LS_MILEAGE  = 'fleet_mileage_v1';
+const LS_MAINT    = 'fleet_maint_v1';
+const LS_DAMAGE   = 'fleet_damage_v1';
+const LS_SYNC     = 'fleet_sync_url';
+
+let vehicles = [], mileageLogs = [], maintLogs = [], damageLogs = [];
+let editingVehicleId = null;
+
+function persist(){
+  try{
+    localStorage.setItem(LS_VEHICLES, JSON.stringify(vehicles));
+    localStorage.setItem(LS_MILEAGE,  JSON.stringify(mileageLogs));
+    localStorage.setItem(LS_MAINT,    JSON.stringify(maintLogs));
+    localStorage.setItem(LS_DAMAGE,   JSON.stringify(damageLogs));
+  }catch(e){}
+}
+function hydrate(){
+  try{
+    vehicles    = JSON.parse(localStorage.getItem(LS_VEHICLES)||'[]');
+    mileageLogs = JSON.parse(localStorage.getItem(LS_MILEAGE)||'[]');
+    maintLogs   = JSON.parse(localStorage.getItem(LS_MAINT)||'[]');
+    damageLogs  = JSON.parse(localStorage.getItem(LS_DAMAGE)||'[]');
+    const url = localStorage.getItem(LS_SYNC)||'';
+    if(url) document.getElementById('sync-url').value = url;
+  }catch(e){}
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function uid(){ return Date.now()+'_'+Math.random().toString(36).slice(2); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmt(d){ if(!d) return '—'; const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function daysFrom(d){ if(!d) return null; const diff=new Date(d+'T12:00:00')-new Date(); return Math.ceil(diff/86400000); }
+function fmtMiles(n){ return n?Number(n).toLocaleString()+' mi':'—'; }
+function getVehicle(id){ return vehicles.find(v=>v.id===id); }
+function getLatestMileage(vid){ const logs=mileageLogs.filter(l=>l.vehicleId===vid).sort((a,b)=>b.miles-a.miles); return logs[0]||null; }
+function getVehicleStatus(v){
+  const latest = getLatestMileage(v.id);
+  const curMiles = latest ? latest.miles : (v.currentMiles||0);
+  const openDamage = damageLogs.filter(d=>d.vehicleId===v.id&&d.status==='open').length>0;
+  if(openDamage) return 'danger';
+  // Check inspection
+  if(v.inspectionDue){
+    const d = daysFrom(v.inspectionDue);
+    if(d!==null && d<0) return 'danger';
+    if(d!==null && d<=30) return 'warn';
+  }
+  // Check oil change
+  const lastOil = maintLogs.filter(m=>m.vehicleId===v.id&&m.type==='Oil Change').sort((a,b)=>b.miles-a.miles)[0];
+  if(lastOil && v.oilInterval){
+    const milesSince = curMiles - lastOil.miles;
+    const pct = milesSince / v.oilInterval;
+    if(pct>=1) return 'danger';
+    if(pct>=0.8) return 'warn';
+  }
+  return 'ok';
+}
+
+// ── Nav / Tabs ─────────────────────────────────────────────────────────────
+function showTab(tab, el){
+  ['overview','mileage','maintenance','damage','checklist','drivers'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===tab?'':'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  if(tab==='overview') renderOverview();
+  if(tab==='mileage') renderMileageLog();
+  if(tab==='maintenance') renderMaintenance();
+  if(tab==='damage') renderDamage();
+  if(tab==='checklist') renderChecklistLog();
+  if(tab==='drivers') renderDrivers();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────
+function renderKPIs(){
+  const total = vehicles.length;
+  const ok    = vehicles.filter(v=>getVehicleStatus(v)==='ok').length;
+  const warn  = vehicles.filter(v=>getVehicleStatus(v)==='warn').length;
+  const danger= vehicles.filter(v=>getVehicleStatus(v)==='danger').length;
+  const openDmg = damageLogs.filter(d=>d.status==='open').length;
+  document.getElementById('kpi-strip').innerHTML = `
+    <div class="kpi blue"><div class="kpi-val">${total}</div><div class="kpi-lbl">Total Vehicles</div></div>
+    <div class="kpi green"><div class="kpi-val">${ok}</div><div class="kpi-lbl">All Clear</div></div>
+    <div class="kpi amber"><div class="kpi-val">${warn}</div><div class="kpi-lbl">Needs Attention</div></div>
+    <div class="kpi red"><div class="kpi-val">${danger}</div><div class="kpi-lbl">Action Required</div></div>
+    <div class="kpi purple"><div class="kpi-val">${openDmg}</div><div class="kpi-lbl">Open Damage Reports</div></div>`;
+  document.getElementById('fleet-sub').textContent = total + ' vehicle' + (total!==1?'s':'') + ' in fleet';
+  document.getElementById('nb-maint').textContent  = warn+danger;
+  document.getElementById('nb-damage').textContent = openDmg;
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────
+function renderOverview(){
+  renderKPIs();
+  if(!vehicles.length){
+    document.getElementById('vehicle-grid').innerHTML = `
+      <div class="empty" style="grid-column:1/-1"><div class="empty-icon">🚛</div>
+      <div class="empty-title">No vehicles yet</div>
+      <div class="empty-sub">Click "Add Vehicle" to add your first vehicle to the fleet.</div></div>`;
+    return;
+  }
+  document.getElementById('vehicle-grid').innerHTML = vehicles.map(v=>{
+    const status = getVehicleStatus(v);
+    const latest = getLatestMileage(v.id);
+    const curMiles = latest ? latest.miles : (v.currentMiles||0);
+    const lastOil = maintLogs.filter(m=>m.vehicleId===v.id&&m.type==='Oil Change').sort((a,b)=>b.miles-a.miles)[0];
+    const oilPct = lastOil&&v.oilInterval ? Math.min(((curMiles-lastOil.miles)/v.oilInterval),1) : 0;
+    const oilColor = oilPct>=1?'var(--red)':oilPct>=0.8?'var(--amber)':'var(--green)';
+    const inspDays = daysFrom(v.inspectionDue);
+    const insDays  = daysFrom(v.insuranceExpires);
+    const statusLabel = status==='ok'?'All Clear':status==='warn'?'Needs Attention':'Action Required';
+    const statusCls   = status==='ok'?'pill-ok':status==='warn'?'pill-warn':'pill-danger';
+    return `<div class="vcard ${status}" onclick="openVehicleDetail('${v.id}')">
+      <div class="vcard-header">
+        <div>
+          <div class="vcard-plate">${v.plate||'—'}</div>
+          <div class="vcard-name">${v.name||''} ${v.make?'· '+v.make+' '+(v.model||''):''} ${v.year?''+v.year:''}</div>
+        </div>
+        <span class="status-pill ${statusCls}">${statusLabel}</span>
+      </div>
+      <div class="vcard-body">
+        <div class="vcard-row"><span class="vcard-label">Current Mileage</span><span class="vcard-val">${fmtMiles(curMiles)}</span></div>
+        <div class="vcard-row"><span class="vcard-label">Driver</span><span class="vcard-val" style="font-family:var(--font)">${v.driver||'Unassigned'}</span></div>
+        ${v.oilInterval?`<div class="vcard-row"><span class="vcard-label">Oil Life</span><span class="vcard-val" style="color:${oilColor}">${lastOil?Math.round(oilPct*100)+'% used':'No record'}</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${oilPct*100}%;background:${oilColor}"></div></div>`:''}
+        <div class="vcard-row" style="margin-top:${v.oilInterval?'8px':'0'}">
+          <span class="vcard-label">Inspection</span>
+          <span class="vcard-val ${!inspDays?'':inspDays<0?'red':inspDays<=30?'amber':'green'}">${inspDays===null?'—':inspDays<0?'OVERDUE '+Math.abs(inspDays)+'d':inspDays<=30?fmt(v.inspectionDue)+' ('+inspDays+'d)':fmt(v.inspectionDue)}</span>
+        </div>
+        <div class="vcard-row">
+          <span class="vcard-label">Insurance</span>
+          <span class="vcard-val ${!insDays?'':insDays<0?'red':insDays<=30?'amber':'green'}">${insDays===null?'—':insDays<0?'EXPIRED':fmt(v.insuranceExpires)+' ('+insDays+'d)'}</span>
+        </div>
+      </div>
+      <div class="vcard-actions">
+        <div class="vcard-btn" onclick="event.stopPropagation();openLogMiles('${v.id}')">📍 Log Miles</div>
+        <div class="vcard-btn" onclick="event.stopPropagation();openLogMaintForVehicle('${v.id}')">🔧 Log Service</div>
+        <div class="vcard-btn primary" onclick="event.stopPropagation();openVehicleDetail('${v.id}')">Details →</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Mileage Log ───────────────────────────────────────────────────────────
+function renderMileageLog(){
+  const filter = document.getElementById('mlog-filter')?.value||'';
+  let logs = [...mileageLogs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(filter) logs = logs.filter(l=>l.vehicleId===filter);
+  const sel = document.getElementById('mlog-filter');
+  if(sel){
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Vehicles</option>'+vehicles.map(v=>`<option value="${v.id}" ${v.id===cur?'selected':''}>${v.plate} — ${v.name||''}</option>`).join('');
+  }
+  if(!logs.length){
+    document.getElementById('mileage-log-list').innerHTML = '<div class="empty"><div class="empty-icon">🛣</div><div class="empty-title">No mileage logs yet</div></div>';
+    return;
+  }
+  document.getElementById('mileage-log-list').innerHTML = logs.map(l=>{
+    const v = getVehicle(l.vehicleId);
+    return `<div class="mlog-row">
+      <div class="mlog-vehicle">${v?v.plate:'?'}</div>
+      <div>
+        <div class="mlog-miles">${fmtMiles(l.miles)}</div>
+        <div style="font-size:10px;color:var(--text3)">${v?v.name||'':''}</div>
+      </div>
+      ${l.photo?`<img class="mlog-photo-thumb" src="${l.photo}" onclick="openLightbox('${l.photo}')" alt="odometer">`:'<div style="width:36px"></div>'}
+      <div class="mlog-source">${l.source==='photo'?'📸 Photo':'Manual'}</div>
+      <div class="mlog-date">${fmt(l.date)}${l.driver?' · '+l.driver:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// Log miles modal (quick, inline)
+function openLogMiles(vehicleId){
+  const v = getVehicle(vehicleId);
+  if(!v) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay show';
+  modal.id = 'modal-log-miles';
+  modal.innerHTML = `<div class="modal" style="width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Log Mileage — ${v.plate}</div>
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Odometer Reading (miles)</label>
+        <input class="form-input" id="lm-miles" type="number" placeholder="45321" style="font-size:22px;font-family:var(--mono)">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Date</label>
+        <input class="form-input" id="lm-date" type="date" value="${today()}">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Driver</label>
+        <input class="form-input" id="lm-driver" placeholder="Driver name" value="${v.driver||''}">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes (optional)</label>
+        <input class="form-input" id="lm-notes" placeholder="Route, observations...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLogMiles('${vehicleId}')">Save</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveLogMiles(vehicleId){
+  const miles = parseFloat(document.getElementById('lm-miles')?.value||0);
+  const date  = document.getElementById('lm-date')?.value||today();
+  const driver= document.getElementById('lm-driver')?.value||'';
+  const notes = document.getElementById('lm-notes')?.value||'';
+  if(!miles){ alert('Enter mileage.'); return; }
+  mileageLogs.push({ id:uid(), vehicleId, miles, date, driver, notes, source:'manual', addedAt:new Date().toISOString() });
+  // Update vehicle current miles
+  const v = getVehicle(vehicleId);
+  if(v && miles > (v.currentMiles||0)) v.currentMiles = miles;
+  persist(); renderOverview();
+  document.getElementById('modal-log-miles')?.remove();
+}
+
+// ── Maintenance ───────────────────────────────────────────────────────────
+function renderMaintenance(){
+  if(!maintLogs.length){
+    document.getElementById('maint-tbody').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">No maintenance records yet. Click "+ Log Service" to add one.</td></tr>`;
+    return;
+  }
+  const rows = [...maintLogs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('maint-tbody').innerHTML = rows.map(m=>{
+    const v = getVehicle(m.vehicleId);
+    const latest = v ? getLatestMileage(v.id) : null;
+    const curMiles = latest ? latest.miles : (v?.currentMiles||0);
+    const milesDue = m.nextMiles ? (m.nextMiles - curMiles) : null;
+    const statusCls = milesDue===null?'':milesDue<0?'red':milesDue<500?'amber':'green';
+    const statusTxt = milesDue===null?'—':milesDue<0?'OVERDUE':milesDue<500?fmtMiles(milesDue)+' left':fmtMiles(milesDue)+' left';
+    return `<tr>
+      <td><div style="font-family:var(--mono);font-weight:700;color:var(--blue)">${v?v.plate:'?'}</div><div style="font-size:10px;color:var(--text3)">${v?v.name||'':''}</div></td>
+      <td>${m.type}</td>
+      <td class="mono" style="color:var(--text2)">${fmt(m.date)}</td>
+      <td class="mono">${fmtMiles(m.miles)}</td>
+      <td class="mono" style="color:var(--text2)">${m.nextMiles?fmtMiles(m.nextMiles):'—'}</td>
+      <td><span class="status-pill ${statusCls==='red'?'pill-danger':statusCls==='amber'?'pill-warn':'pill-ok'}">${statusTxt}</span></td>
+      <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="deleteMaint('${m.id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+  // Update vehicle selects
+  const vSel = document.getElementById('maint-vehicle');
+  if(vSel) vSel.innerHTML = vehicles.map(v=>`<option value="${v.id}">${v.plate} — ${v.name||''}</option>`).join('');
+}
+
+function openLogMaint(){
+  const vSel = document.getElementById('maint-vehicle');
+  if(vSel) vSel.innerHTML = vehicles.map(v=>`<option value="${v.id}">${v.plate} — ${v.name||''}</option>`).join('');
+  document.getElementById('maint-date').value = today();
+  document.getElementById('modal-maint').classList.add('show');
+}
+function openLogMaintForVehicle(vid){
+  openLogMaint();
+  setTimeout(()=>{ const s=document.getElementById('maint-vehicle'); if(s) s.value=vid; },50);
+}
+function saveMaint(){
+  const vehicleId = document.getElementById('maint-vehicle').value;
+  const type  = document.getElementById('maint-type').value;
+  const date  = document.getElementById('maint-date').value;
+  const miles = parseFloat(document.getElementById('maint-miles').value||0);
+  const next  = parseFloat(document.getElementById('maint-next-miles').value||0)||null;
+  const notes = document.getElementById('maint-notes').value;
+  if(!vehicleId||!date){ alert('Select a vehicle and date.'); return; }
+  maintLogs.push({ id:uid(), vehicleId, type, date, miles, nextMiles:next, notes, addedAt:new Date().toISOString() });
+  persist(); closeModal('modal-maint'); renderMaintenance(); renderKPIs();
+}
+function deleteMaint(id){ if(confirm('Remove this record?')){ maintLogs=maintLogs.filter(m=>m.id!==id); persist(); renderMaintenance(); } }
+
+// ── Damage Reports ────────────────────────────────────────────────────────
+function renderDamage(){
+  const showResolved = document.getElementById('show-resolved')?.checked;
+  let logs = [...damageLogs].sort((a,b)=>new Date(b.reportedAt)-new Date(a.reportedAt));
+  if(!showResolved) logs = logs.filter(d=>d.status==='open');
+  if(!logs.length){
+    document.getElementById('damage-list').innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">No open damage reports</div><div class="empty-sub">All vehicles clear.</div></div>';
+    return;
+  }
+  document.getElementById('damage-list').innerHTML = logs.map(d=>{
+    const v = getVehicle(d.vehicleId);
+    return `<div class="damage-card ${d.status==='resolved'?'resolved':''}">
+      ${d.photo?`<img class="damage-photo" src="${d.photo}" onclick="openLightbox('${d.photo}')" alt="damage photo">`:`<div class="damage-photo-placeholder">📷</div>`}
+      <div class="damage-info">
+        <div class="damage-title">${v?v.plate+' — '+(v.name||''):'Unknown Vehicle'} <span style="font-size:11px;font-weight:400;color:var(--text3)">reported by ${d.driver||'driver'}</span></div>
+        <div class="damage-meta">${fmt(d.reportedAt?.slice(0,10))} · ${d.location||'Location not specified'}</div>
+        <div class="damage-desc">${d.description||'No description'}</div>
+        <div class="damage-actions">
+          ${d.status==='open'?`<button class="btn btn-ghost" style="padding:4px 12px;font-size:11px" onclick="resolveDamage('${d.id}')">✓ Mark Resolved</button>`:'<span style="font-size:11px;color:var(--green)">✓ Resolved</span>'}
+          <button class="btn btn-red" style="padding:4px 12px;font-size:11px" onclick="deleteDamage('${d.id}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function resolveDamage(id){ const d=damageLogs.find(x=>x.id===id); if(d){ d.status='resolved'; persist(); renderDamage(); renderKPIs(); renderOverview(); } }
+function deleteDamage(id){ if(confirm('Delete this report?')){ damageLogs=damageLogs.filter(d=>d.id!==id); persist(); renderDamage(); renderKPIs(); } }
+
+// ── Notification popup ────────────────────────────────────────────────────
+function showNotif(type, title, msg){
+  const bar = document.getElementById('notif-bar');
+  bar.className = 'notif-bar show' + (type==='amber'?' amber':'');
+  document.getElementById('notif-icon').textContent = type==='amber'?'⚠️':'🚨';
+  document.getElementById('notif-title').textContent = title;
+  document.getElementById('notif-msg').textContent = msg;
+  if(type!=='amber') setTimeout(()=>bar.classList.remove('show'),15000);
+}
+function closeNotif(){ document.getElementById('notif-bar').classList.remove('show'); }
+
+// Check on load for unread damage
+function checkAlerts(){
+  const openDmg = damageLogs.filter(d=>d.status==='open'&&!d.seen);
+  if(openDmg.length){
+    const latest = openDmg[openDmg.length-1];
+    const v = getVehicle(latest.vehicleId);
+    showNotif('red','🚨 Damage Reported',`${v?v.plate:''}: ${latest.description||'See Damage Reports tab'} — reported by ${latest.driver||'driver'}`);
+    openDmg.forEach(d=>d.seen=true);
+    persist();
+  } else {
+    // Check maintenance warnings
+    const warn = vehicles.filter(v=>getVehicleStatus(v)==='warn');
+    if(warn.length) showNotif('amber','⚠️ Maintenance Due',warn.map(v=>v.plate).join(', ')+' need attention soon.');
+  }
+}
+
+// ── Vehicle detail modal ──────────────────────────────────────────────────
+function openVehicleDetail(id){
+  const v = getVehicle(id);
+  if(!v) return;
+  const latest = getLatestMileage(id);
+  const curMiles = latest ? latest.miles : (v.currentMiles||0);
+  const dmgOpen = damageLogs.filter(d=>d.vehicleId===id&&d.status==='open').length;
+  const services = maintLogs.filter(m=>m.vehicleId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('vd-title').textContent = v.plate + ' — ' + (v.name||'');
+  document.getElementById('vd-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">CURRENT MILEAGE</div><div style="font-size:22px;font-weight:800;font-family:var(--mono);color:var(--blue)">${fmtMiles(curMiles)}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">DRIVER</div><div style="font-size:16px;font-weight:700">${v.driver||'Unassigned'}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">INSPECTION DUE</div><div style="font-size:14px;font-weight:700;color:${daysFrom(v.inspectionDue)!=null&&daysFrom(v.inspectionDue)<0?'var(--red)':daysFrom(v.inspectionDue)!=null&&daysFrom(v.inspectionDue)<=30?'var(--amber)':'var(--green)'}">${fmt(v.inspectionDue)||'Not set'}</div></div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px"><div style="font-size:10px;color:var(--text3);margin-bottom:4px">INSURANCE EXPIRES</div><div style="font-size:14px;font-weight:700;color:${daysFrom(v.insuranceExpires)!=null&&daysFrom(v.insuranceExpires)<0?'var(--red)':daysFrom(v.insuranceExpires)!=null&&daysFrom(v.insuranceExpires)<=30?'var(--amber)':'var(--green)'}">${fmt(v.insuranceExpires)||'Not set'}</div></div>
+    </div>
+    ${dmgOpen?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;color:var(--red);font-size:13px;font-weight:600">🚨 ${dmgOpen} open damage report${dmgOpen>1?'s':''}</div>`:''}
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent Services</div>
+    ${services.length?services.slice(0,4).map(s=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px">${s.type}</span>
+        <span style="font-size:12px;color:var(--text2)">${fmt(s.date)} · ${fmtMiles(s.miles)}</span>
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text3)">No service records yet.</div>'}`;
+  document.getElementById('vd-edit-btn').onclick = ()=>{ closeModal('modal-vehicle-detail'); openEditVehicle(id); };
+  document.getElementById('vd-delete-btn').onclick = ()=>{ if(confirm('Remove '+v.plate+' from fleet?')){ vehicles=vehicles.filter(x=>x.id!==id); persist(); closeModal('modal-vehicle-detail'); renderOverview(); } };
+  document.getElementById('modal-vehicle-detail').classList.add('show');
+}
+
+// ── Add/Edit Vehicle ──────────────────────────────────────────────────────
+function openAddVehicle(){
+  editingVehicleId = null;
+  document.getElementById('modal-vehicle-title').textContent = 'Add Vehicle';
+  ['v-plate','v-name','v-make','v-model','v-year','v-miles','v-driver','v-inspect-due','v-insurance'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('v-oil-interval').value = '5000';
+  document.getElementById('modal-vehicle').classList.add('show');
+}
+function openEditVehicle(id){
+  const v = getVehicle(id);
+  if(!v) return;
+  editingVehicleId = id;
+  document.getElementById('modal-vehicle-title').textContent = 'Edit Vehicle';
+  document.getElementById('v-plate').value  = v.plate||'';
+  document.getElementById('v-name').value   = v.name||'';
+  document.getElementById('v-make').value   = v.make||'';
+  document.getElementById('v-model').value  = v.model||'';
+  document.getElementById('v-year').value   = v.year||'';
+  document.getElementById('v-miles').value  = v.currentMiles||'';
+  document.getElementById('v-driver').value = v.driver||'';
+  document.getElementById('v-oil-interval').value = v.oilInterval||5000;
+  document.getElementById('v-inspect-due').value   = v.inspectionDue||'';
+  document.getElementById('v-insurance').value     = v.insuranceExpires||'';
+  document.getElementById('modal-vehicle').classList.add('show');
+}
+function saveVehicle(){
+  const plate = document.getElementById('v-plate').value.trim().toUpperCase();
+  if(!plate){ alert('Enter a license plate.'); return; }
+  const data = {
+    plate, name: document.getElementById('v-name').value.trim(),
+    make:  document.getElementById('v-make').value.trim(),
+    model: document.getElementById('v-model').value.trim(),
+    year:  parseInt(document.getElementById('v-year').value)||null,
+    currentMiles: parseFloat(document.getElementById('v-miles').value)||0,
+    driver: document.getElementById('v-driver').value.trim(),
+    oilInterval: parseFloat(document.getElementById('v-oil-interval').value)||5000,
+    inspectionDue:   document.getElementById('v-inspect-due').value||'',
+    insuranceExpires:document.getElementById('v-insurance').value||'',
+  };
+  if(editingVehicleId){
+    const idx = vehicles.findIndex(v=>v.id===editingVehicleId);
+    if(idx>-1) vehicles[idx] = {...vehicles[idx],...data};
+  } else {
+    vehicles.push({id:uid(),...data,addedAt:new Date().toISOString()});
+  }
+  persist(); closeModal('modal-vehicle'); renderOverview();
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────
+function closeModal(id){ document.getElementById(id)?.classList.remove('show'); }
+function openLightbox(src){ document.getElementById('lightbox-img').src=src; document.getElementById('lightbox').classList.add('show'); }
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); }
+
+// ── Export ────────────────────────────────────────────────────────────────
+function renderChecklistLog(){
+  checkIncomingChecklists();
+  const allLogs = JSON.parse(localStorage.getItem('fleet_cl_logs')||'[]');
+  const filter  = document.getElementById('cl-filter-vehicle')?.value||'';
+  const logs    = (filter ? allLogs.filter(l=>l.vehicleId===filter||l.vehiclePlate===filter) : allLogs)
+                    .sort((a,b)=>b.date>a.date?1:-1);
+
+  const vSel = document.getElementById('cl-filter-vehicle');
+  if(vSel){
+    const cur=vSel.value;
+    const plates=[...new Set(allLogs.map(l=>l.vehiclePlate).filter(Boolean))];
+    vSel.innerHTML='<option value="">All Vehicles</option>'
+      + vehicles.map(v=>`<option value="${v.id}"${v.id===cur?' selected':''}>${v.plate}</option>`).join('')
+      + plates.filter(p=>!vehicles.find(v=>v.plate===p)).map(p=>`<option value="${p}"${p===cur?' selected':''}>${p}</option>`).join('');
+  }
+
+  // Build a 30-day calendar grid
+  const today = new Date();
+  const days  = [];
+  for(let i=29;i>=0;i--){
+    const d=new Date(today); d.setDate(d.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  // Group logs by date
+  const byDate={};
+  logs.forEach(l=>{ if(!byDate[l.date]) byDate[l.date]=[]; byDate[l.date].push(l); });
+
+  // Calendar strip
+  const calHtml = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Last 30 Days — Submission Tracker</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${days.map(d=>{
+          const entries=byDate[d]||[];
+          const allOk=entries.length&&entries.every(l=>l.allPassed!==false&&(l.checkedCount===undefined||l.checkedCount===l.totalCount));
+          const partial=entries.length&&!allOk;
+          const missing=!entries.length;
+          const isToday=d===today.toISOString().slice(0,10);
+          const bg=missing?(d<today.toISOString().slice(0,10)?'rgba(239,68,68,.15)':'rgba(255,255,255,.04)')
+                  :allOk?'rgba(34,197,94,.25)':'rgba(245,158,11,.25)';
+          const border=isToday?'2px solid var(--blue)':'1px solid transparent';
+          const icon=missing?(d<today.toISOString().slice(0,10)?'✗':'·'):allOk?'✓':'!';
+          const iconColor=missing?(d<today.toISOString().slice(0,10)?'var(--red)':'var(--text3)'):allOk?'var(--green)':'var(--amber)';
+          return `<div title="${d}: ${entries.length?entries.map(l=>l.driver||l.vehiclePlate).join(', '):'No submission'}"
+            style="width:34px;height:34px;border-radius:6px;background:${bg};border:${border};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default;transition:transform .1s"
+            onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''">
+            <div style="font-size:13px;color:${iconColor};font-weight:700;line-height:1">${icon}</div>
+            <div style="font-size:7px;color:var(--text3);margin-top:1px">${d.slice(8)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px;font-size:10px;color:var(--text3)">
+        <span><span style="color:var(--green);font-weight:700">✓</span> All passed</span>
+        <span><span style="color:var(--amber);font-weight:700">!</span> Incomplete</span>
+        <span><span style="color:var(--red);font-weight:700">✗</span> Not submitted</span>
+        <span style="border:2px solid var(--blue);border-radius:3px;padding:0 3px">Today</span>
+      </div>
+    </div>`;
+
+  document.getElementById('cl-calendar').innerHTML = calHtml;
+
+  if(!logs.length){
+    document.getElementById('cl-log-tbody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">No checklists yet. Drivers submit from the mobile app each morning.</td></tr>';
+    return;
+  }
+  document.getElementById('cl-log-tbody').innerHTML = logs.map(l=>{
+    const checked = l.checkedCount!==undefined ? l.checkedCount : (l.items?l.items.filter(i=>i.checked).length:null);
+    const total   = l.totalCount  !==undefined ? l.totalCount   : (l.items?l.items.length:10);
+    const allOk   = l.allPassed!==false && (checked===null||checked===total);
+    const failed  = l.failedItems||(l.items?l.items.filter(i=>!i.checked).map(i=>i.label):[]);
+    const plate   = l.vehiclePlate || vehicles.find(v=>v.id===l.vehicleId)?.plate||'?';
+    return `<tr>
+      <td class="mono" style="color:var(--text2)">${l.date}</td>
+      <td><span style="font-family:var(--mono);font-weight:700;color:var(--blue)">${plate}</span></td>
+      <td style="color:var(--text2)">${l.driver||'—'}</td>
+      <td>
+        <span style="font-size:12px;font-weight:700;color:${allOk?'var(--green)':'var(--amber)'}">${checked!==null?checked+'/'+total:'—'}</span>
+        ${!allOk&&failed.length?`<div style="font-size:10px;color:var(--red);margin-top:2px">⚠ ${failed.slice(0,2).join(', ')}${failed.length>2?'...':''}</div>`:''}
+      </td>
+      <td style="font-size:11px;color:var(--text2);max-width:180px">${l.notes||'—'}</td>
+      <td>${l.photoUrl?`<a href="${l.photoUrl}" target="_blank" style="color:var(--blue);font-size:11px">📷 View</a>`:'—'}</td>
+      <td><span class="status-pill ${allOk?'pill-ok':'pill-warn'}">${allOk?'✓ Complete':'⚠ Incomplete'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Driver Management ────────────────────────────────────────────────────
+let drivers = [];
+let editingDriverId = null;
+
+function loadDrivers(){
+  try{ drivers = JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]'); }catch(e){ drivers=[]; }
+}
+function saveDrivers(){
+  try{ localStorage.setItem('fleet_drivers_v1', JSON.stringify(drivers)); }catch(e){}
+}
+
+function renderDrivers(){
+  loadDrivers();
+  const vSel = document.getElementById('d-vehicle');
+  if(vSel) vSel.innerHTML='<option value="">— Not assigned —</option>'+vehicles.map(v=>`<option value="${v.id}">${v.plate} ${v.name?'— '+v.name:''}</option>`).join('');
+  if(!drivers.length){
+    document.getElementById('drivers-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No drivers yet. Click "+ Add Driver" to create the first account.</td></tr>';
+    return;
+  }
+  document.getElementById('drivers-tbody').innerHTML = drivers.map(d=>{
+    const v = vehicles.find(x=>x.id===d.vehicleId);
+    return `<tr>
+      <td><div style="font-weight:700">${d.name}</div></td>
+      <td><div style="font-family:var(--mono);background:var(--surface2);display:inline-block;padding:2px 10px;border-radius:6px;letter-spacing:3px">${'•'.repeat(String(d.pin).length)}</div>
+          <button onclick="togglePinVis('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;margin-left:6px" id="pin-btn-${d.id}">show</button>
+          <span id="pin-val-${d.id}" style="display:none;font-family:var(--mono);color:var(--amber);margin-left:6px">${d.pin}</span>
+      </td>
+      <td>${v?'<span style="font-family:var(--mono);color:var(--blue)">'+v.plate+'</span>':'<span style="color:var(--text3)">Unassigned</span>'}</td>
+      <td><span class="status-pill ${d.role==='supervisor'?'pill-warn':'pill-ok'}">${d.role||'driver'}</span></td>
+      <td style="color:var(--text3);font-size:11px">${d.lastActive?new Date(d.lastActive).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'Never'}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="openEditDriver('${d.id}')">Edit</button>
+        <button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="deleteDriver('${d.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function togglePinVis(id){
+  const val = document.getElementById('pin-val-'+id);
+  const btn = document.getElementById('pin-btn-'+id);
+  const showing = val.style.display!=='none';
+  val.style.display = showing?'none':'inline';
+  btn.textContent  = showing?'show':'hide';
+}
+
+function openAddDriver(){
+  editingDriverId = null;
+  document.getElementById('modal-driver-title').textContent = 'Add Driver';
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-pin').value  = '';
+  document.getElementById('d-role').value = 'driver';
+  const vSel = document.getElementById('d-vehicle');
+  if(vSel) vSel.innerHTML='<option value="">— Not assigned —</option>'+vehicles.map(v=>`<option value="${v.id}">${v.plate} ${v.name?'— '+v.name:''}</option>`).join('');
+  document.getElementById('modal-driver').classList.add('show');
+}
+
+function openEditDriver(id){
+  loadDrivers();
+  const d = drivers.find(x=>x.id===id);
+  if(!d) return;
+  editingDriverId = id;
+  document.getElementById('modal-driver-title').textContent = 'Edit Driver';
+  document.getElementById('d-name').value = d.name||'';
+  document.getElementById('d-pin').value  = d.pin||'';
+  document.getElementById('d-role').value = d.role||'driver';
+  const vSel = document.getElementById('d-vehicle');
+  if(vSel){ vSel.innerHTML='<option value="">— Not assigned —</option>'+vehicles.map(v=>`<option value="${v.id}">${v.plate} ${v.name?'— '+v.name:''}</option>`).join(''); vSel.value=d.vehicleId||''; }
+  document.getElementById('modal-driver').classList.add('show');
+}
+
+function saveDriver(){
+  loadDrivers();
+  const name = document.getElementById('d-name').value.trim();
+  const pin  = String(document.getElementById('d-pin').value).trim();
+  const role = document.getElementById('d-role').value;
+  const vehicleId = document.getElementById('d-vehicle').value||'';
+  if(!name){ alert("Enter the driver's name."); return; }
+  if(!pin||pin.length<4){ alert('PIN must be at least 4 digits.'); return; }
+  if(editingDriverId){
+    const idx = drivers.findIndex(d=>d.id===editingDriverId);
+    if(idx>-1) drivers[idx] = {...drivers[idx], name, pin, role, vehicleId};
+  } else {
+    drivers.push({ id:uid(), name, pin, role, vehicleId, addedAt:new Date().toISOString() });
+  }
+  saveDrivers(); closeModal('modal-driver'); renderDrivers();
+}
+
+function deleteDriver(id){
+  loadDrivers();
+  if(confirm('Remove this driver account?')){ drivers=drivers.filter(d=>d.id!==id); saveDrivers(); renderDrivers(); }
+}
+
+function exportData(){
+  const data = { vehicles, mileageLogs, maintLogs, damageLogs, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = 'fleet_export_'+today()+'.json'; a.click();
+}
+
+function saveSyncUrl(){ try{ localStorage.setItem(LS_SYNC, document.getElementById('sync-url').value); }catch(e){} }
+
+// ── Damage received from mobile (via shared JSON in localStorage) ─────────
+function checkIncomingChecklists(){
+  try{
+    const queue = JSON.parse(localStorage.getItem('fleet_cl_queue')||'[]');
+    if(!queue.length) return;
+    // Merge into desktop log
+    const existing = JSON.parse(localStorage.getItem('fleet_cl_logs')||'[]');
+    const merged = [...new Map([...existing,...queue].map(l=>[l.id,l])).values()];
+    localStorage.setItem('fleet_cl_logs', JSON.stringify(merged));
+    localStorage.removeItem('fleet_cl_queue');
+  }catch(e){}
+}
+
+function checkIncomingDamage(){
+  try{
+    const pending = JSON.parse(localStorage.getItem('fleet_damage_pending')||'[]');
+    if(!pending.length) return;
+    pending.forEach(d=>{ damageLogs.push({...d,seen:false}); });
+    localStorage.removeItem('fleet_damage_pending');
+    persist(); renderDamage(); renderKPIs();
+    const v = getVehicle(pending[0].vehicleId);
+    showNotif('red','🚨 New Damage Report',`${v?v.plate:''}: ${pending[0].description||'No description'} — by ${pending[0].driver||'driver'}`);
+  }catch(e){}
+}
+
+// ── Google Sheets Sync ───────────────────────────────────────────────────
+function setSyncStatus(msg, color){
+  const el = document.getElementById('sync-status');
+  if(el){ el.textContent=msg; el.style.color=color||'var(--text3)'; }
+}
+
+async function syncSave(){
+  const url = document.getElementById('sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL in the sidebar first.'); return; }
+  setSyncStatus('Saving...','#d97706');
+  try{
+    // Strip photos from mileage/damage for initial save to avoid 50MB limit
+    // Photos are stored locally; only metadata syncs
+    loadDrivers();
+    const payload = {
+      vehicles,
+      drivers,
+      mileageLogs: mileageLogs.map(l=>({...l, photo:l.photo?'[photo]':null})),
+      maintLogs,
+      damageLogs:  damageLogs.map(d=>({...d, photo:d.photo?'[photo]':null})),
+      savedAt: new Date().toISOString(),
+    };
+    const json = JSON.stringify(payload);
+    const CHUNK = 49000;
+    const chunks = [];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    setSyncStatus('✓ Saved '+new Date().toLocaleTimeString(),'#22c55e');
+  }catch(e){ setSyncStatus('✗ '+e.message,'#ef4444'); }
+}
+
+async function syncLoad(){
+  const url = document.getElementById('sync-url').value.trim();
+  if(!url){ alert('Paste your Apps Script URL in the sidebar first.'); return; }
+  setSyncStatus('Loading...','#d97706');
+  try{
+    const res = await fetch(url,{redirect:'follow'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.vehicles){
+      vehicles    = data.vehicles;
+      if(data.drivers){ drivers=data.drivers; saveDrivers(); }
+      // Merge mileage logs - keep local photos, update metadata
+      const incomingMile = data.mileageLogs||[];
+      incomingMile.forEach(inc=>{
+        const existing = mileageLogs.find(l=>l.id===inc.id);
+        if(!existing) mileageLogs.push(inc);
+        else if(inc.photo==='[photo]' && existing.photo) inc.photo=existing.photo;
+      });
+      mileageLogs = [...new Map([...mileageLogs,...incomingMile].map(l=>[l.id,l])).values()];
+      maintLogs   = data.maintLogs||[];
+      // Merge damage - keep local photos
+      const incomingDmg = data.damageLogs||[];
+      incomingDmg.forEach(inc=>{
+        const existing = damageLogs.find(d=>d.id===inc.id);
+        if(existing && inc.photo==='[photo]' && existing.photo) inc.photo=existing.photo;
+      });
+      damageLogs = [...new Map([...damageLogs,...incomingDmg].map(d=>[d.id,d])).values()];
+      persist(); renderOverview(); renderKPIs(); checkAlerts();
+      setSyncStatus('✓ Loaded '+new Date().toLocaleTimeString(),'#22c55e');
+    } else {
+      throw new Error('No fleet data found. Save first.');
+    }
+  }catch(e){ setSyncStatus('✗ '+e.message,'#ef4444'); }
+}
+
+function saveSyncUrl(){
+  try{ localStorage.setItem(LS_SYNC, document.getElementById('sync-url').value); }catch(e){}
+}
+
+// ── Apps Script — paste this in Google Apps Script, deploy as Web App ───
+// const SHEET_ID   = 'YOUR_GOOGLE_SHEET_ID';
+// const DRIVE_FOLDER = 'Fleet Photos'; // folder name in your Drive
+//
+// function getOrCreateFolder(name){
+//   const folders = DriveApp.getFoldersByName(name);
+//   return folders.hasNext() ? folders.next() : DriveApp.createFolder(name);
+// }
+//
+// function doGet(e){
+//   try{
+//     const ss=SpreadsheetApp.openById(SHEET_ID);
+//     const sh=ss.getSheetByName('FleetJSON');
+//     if(sh&&sh.getLastRow()>0){
+//       const chunks=sh.getRange(1,1,sh.getLastRow(),1).getValues();
+//       const json=chunks.map(r=>r[0]).join('');
+//       return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
+//     }
+//     return ContentService.createTextOutput(JSON.stringify({error:'No data yet'}));
+//   }catch(e){ return ContentService.createTextOutput(JSON.stringify({error:e.message})); }
+// }
+//
+// function doPost(e){
+//   try{
+//     const p=JSON.parse(e.postData.contents);
+//
+//     // ── Photo upload ──────────────────────────────────────────────────
+//     if(p.action==='uploadPhoto'){
+//       const folder = getOrCreateFolder(DRIVE_FOLDER);
+//       const blob = Utilities.newBlob(Utilities.base64Decode(p.photo), p.mimeType||'image/jpeg', p.filename||'photo.jpg');
+//       const file = folder.createFile(blob);
+//       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+//       const url = 'https://drive.google.com/file/d/'+file.getId()+'/view';
+//       return ContentService.createTextOutput(JSON.stringify({url})).setMimeType(ContentService.MimeType.JSON);
+//     }
+//
+//     // ── Checklist submission ──────────────────────────────────────────
+//     if(p.action==='checklist'){
+//       const ss=SpreadsheetApp.openById(SHEET_ID);
+//       let sh=ss.getSheetByName('Checklists');
+//       if(!sh){ sh=ss.insertSheet('Checklists'); sh.appendRow(['Date','Vehicle','Driver','All Passed','Notes','Photo URL','Submitted At']); }
+//       const r=p.record;
+//       sh.appendRow([r.date, r.vehiclePlate, r.driver, r.allPassed?'YES':'NO', r.notes||'', r.photoUrl||'', r.submittedAt]);
+//       return ContentService.createTextOutput('ok');
+//     }
+//
+//     // ── Fleet data sync ───────────────────────────────────────────────
+//     if(p.chunks){
+//       const ss=SpreadsheetApp.openById(SHEET_ID);
+//       let sh=ss.getSheetByName('FleetJSON');
+//       if(!sh) sh=ss.insertSheet('FleetJSON');
+//       sh.clearContents();
+//       sh.getRange(1,1,p.chunks.length,1).setValues(p.chunks.map(c=>[c]));
+//     }
+//     return ContentService.createTextOutput('ok');
+//   }catch(e){ return ContentService.createTextOutput(JSON.stringify({error:e.message})); }
+// }
+
+// ── Init ──────────────────────────────────────────────────────────────────
+document.getElementById('sb-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+hydrate(); loadDrivers();
+renderOverview();
+checkAlerts();
+checkIncomingDamage();
+checkIncomingChecklists();
+// Poll for incoming damage reports every 30s
+setInterval(checkIncomingDamage, 30000);
+</script>
+</body>
+</html>
