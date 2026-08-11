@@ -992,7 +992,7 @@ async function driverSync(){
     const json=JSON.stringify(payload);
     const CHUNK=49000; const chunks=[];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
-    await fetch(url,{method:'POST',body:JSON.stringify({chunks}),redirect:'follow'});
+    await fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify({chunks})});
     // Step 2: Load latest from Sheets
     const res=await fetch(url,{redirect:'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -1061,8 +1061,7 @@ async function driverSyncSave(){
     const json=JSON.stringify(payload);
     const CHUNK=49000; const chunks=[];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
-    const res=await fetch(url,{method:'POST',body:JSON.stringify({chunks}),redirect:'follow'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    const res=await fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify({chunks})});
     driverMsg('✓ Saved','rgba(34,197,94,.9)');
   }catch(e){ driverMsg('✗ '+e.message,'rgba(239,68,68,.9)'); }
 }
@@ -1358,8 +1357,7 @@ async function mobileSyncSave(){
     const json = JSON.stringify(payload);
     const CHUNK=49000; const chunks=[];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
-    const res=await fetch(url,{method:'POST',body:JSON.stringify({chunks}),redirect:'follow'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    const res=await fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify({chunks})});
     mSyncStatus('✓ Saved '+new Date().toLocaleTimeString(),'#22c55e');
   }catch(e){ mSyncStatus('✗ '+e.message,'#ef4444'); }
 }
