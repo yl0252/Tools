@@ -1127,7 +1127,7 @@ async function syncSave(){
     const CHUNK = 49000;
     const chunks = [];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
-    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    const res = await fetch(url,{method:'POST',body:JSON.stringify({chunks}),redirect:'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     setSyncStatus('✓ Saved '+new Date().toLocaleTimeString(),'#22c55e');
   }catch(e){ setSyncStatus('✗ '+e.message,'#ef4444'); }
@@ -1138,7 +1138,7 @@ async function syncLoad(){
   if(!url){ alert('Paste your Apps Script URL in the sidebar first.'); return; }
   setSyncStatus('Loading...','#d97706');
   try{
-    const res = await fetch(url,{redirect:'follow'});
+    const res = await fetch(url,{redirect:'follow',mode:'cors'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     if(data.error) throw new Error(data.error);
