@@ -19,8 +19,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .header-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
 /* Nav */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid rgba(255,255,255,.1);display:flex;z-index:200;height:66px}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;font-family:var(--font);color:rgba(255,255,255,.45);font-size:10px;font-weight:600;padding:8px 4px;transition:color .15s}
-.nav-btn.active{color:#fff}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;font-family:var(--font);color:rgba(255,255,255,.7);font-size:11px;font-weight:700;padding:8px 4px;transition:color .15s}
+.nav-btn.active{color:#fff;border-top:2px solid #0ea5e9;}
 .nav-btn .ni{font-size:18px;line-height:1}
 /* Screens */
 .screen{display:none;padding:14px 16px}
@@ -115,49 +115,68 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="scr-login" style="display:none;position:fixed;inset:0;background:var(--navy);z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:32px">
-  <div style="text-align:center;margin-bottom:28px">
-    <div style="font-size:44px;margin-bottom:10px">🚛</div>
-    <div style="font-size:22px;font-weight:800;color:#fff">Fleet Driver</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px" id="login-sub">Select your name to continue</div>
+<div id="scr-login" style="display:none;position:fixed;inset:0;background:#1e3a5f;z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;overflow-y:auto">
+
+  <!-- Logo -->
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="font-size:56px;margin-bottom:12px">🚛</div>
+    <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px">Fleet Driver</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.4);margin-top:6px" id="login-sub">Select your name to log in</div>
   </div>
 
   <!-- Driver selector -->
   <div id="login-driver-step" style="width:100%;max-width:420px">
-    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;text-align:center">Who are you?</div>
-    <div id="login-driver-list" style="display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto"></div>
-
-    <!-- Sync URL - always visible -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)">
-      <div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em">☁️ Load drivers from Sheets</div>
-      <input id="login-sync-url" type="url" placeholder="Paste Apps Script URL..."
-        style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 13px;font-size:12px;color:#fff;font-family:Inter,sans-serif;outline:none;margin-bottom:8px"
-        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <button onclick="loginSync()" style="width:100%;padding:11px;background:rgba(14,165,233,.25);border:1px solid rgba(14,165,233,.4);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif">☁️ Load Drivers</button>
-      <div id="login-sync-status" style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:8px;min-height:16px"></div>
-    </div>
+    <div id="login-driver-list" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;background:transparent"></div>
+    <div style="margin-top:16px;text-align:center;font-size:12px;color:rgba(255,255,255,.25)">Not listed? Ask your manager to add you.</div>
   </div>
 
   <!-- PIN entry -->
-  <div id="login-pin-step" style="display:none;width:100%;max-width:300px;text-align:center">
-    <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:16px" id="login-driver-greeting">Hello!</div>
-    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:28px" id="pin-dots">
+  <div id="login-pin-step" style="display:none;width:100%;max-width:320px;text-align:center">
+    <div style="font-size:15px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:20px" id="login-driver-greeting">Hello!</div>
+    <div style="display:flex;justify-content:center;gap:16px;margin-bottom:32px" id="pin-dots">
       <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
     </div>
-    <div id="pin-error" style="display:none;text-align:center;color:#ef4444;font-size:13px;font-weight:600;margin-bottom:12px">Incorrect PIN. Try again.</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:320px;margin:0 auto;width:100%">
-      <button class="pin-key" onclick="pinPress('1')">1</button>
-      <button class="pin-key" onclick="pinPress('2')">2</button>
-      <button class="pin-key" onclick="pinPress('3')">3</button>
-      <button class="pin-key" onclick="pinPress('4')">4</button>
-      <button class="pin-key" onclick="pinPress('5')">5</button>
-      <button class="pin-key" onclick="pinPress('6')">6</button>
-      <button class="pin-key" onclick="pinPress('7')">7</button>
-      <button class="pin-key" onclick="pinPress('8')">8</button>
-      <button class="pin-key" onclick="pinPress('9')">9</button>
-      <button class="pin-key" onclick="loginBack()" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.5);font-size:12px">‹ Back</button>
-      <button class="pin-key" onclick="pinPress('0')">0</button>
-      <button class="pin-key" onclick="pinDelete()" style="font-size:20px">⌫</button>
+    <div id="pin-error" style="display:none;text-align:center;color:#ef4444;font-size:13px;font-weight:600;margin-bottom:14px">Incorrect PIN. Try again.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:320px;margin:0 auto;width:100%">
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('1')">1</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('2')">2</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('3')">3</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('4')">4</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('5')">5</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('6')">6</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('7')">7</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('8')">8</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('9')">9</button>
+      <button style="height:72px;border-radius:16px;background:#0a1520;border:2px solid #2d4a6b;color:rgba(255,255,255,.5);font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif" onclick="loginBack()">‹ Back</button>
+      <button style="height:72px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:28px;font-weight:700;cursor:pointer;font-family:monospace;-webkit-tap-highlight-color:transparent;box-shadow:0 3px 10px rgba(0,0,0,.5)" onclick="pinPress('0')">0</button>
+      <button style="height:72px;border-radius:16px;background:#0a1520;border:2px solid #2d4a6b;color:#ffffff;font-size:24px;font-weight:700;cursor:pointer" onclick="pinDelete()">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PIN OVERLAY -->
+<div id="admin-pin-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,25,40,.92);z-index:900;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px">
+  <div style="background:#1a2d42;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;width:100%;max-width:300px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Admin Access</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:24px">Enter admin PIN to open settings</div>
+    <div style="display:flex;justify-content:center;gap:14px;margin-bottom:20px" id="admin-pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div id="admin-pin-error" style="display:none;color:#ef4444;font-size:12px;font-weight:600;margin-bottom:12px">Incorrect PIN</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto">
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('1')">1</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('2')">2</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('3')">3</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('4')">4</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('5')">5</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('6')">6</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('7')">7</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('8')">8</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('9')">9</button>
+      <button class="pin-key" style="padding:14px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:11px" onclick="closeAdminPin()">Cancel</button>
+      <button class="pin-key" style="padding:14px" onclick="adminPinPress('0')">0</button>
+      <button class="pin-key" style="padding:14px;font-size:18px" onclick="adminPinDelete()">⌫</button>
     </div>
   </div>
 </div>
@@ -1005,30 +1024,20 @@ async function driverSyncSave(){
 
 // ── Login screen sync ────────────────────────────────────────────────────
 function loginSync(){
-  const input = document.getElementById('login-sync-url');
-  const status = document.getElementById('login-sync-status');
-  const url = (input?input.value:'').trim();
-  if(!url){ if(status) status.textContent='Paste the URL first'; return; }
-  try{ localStorage.setItem('fleet_sync_url', url); }catch(e){}
-  if(status){ status.textContent='Loading...'; status.style.color='rgba(255,255,255,.6)'; }
+  const url = localStorage.getItem('fleet_sync_url')||'';
+  if(!url) return;
   fetch(url,{redirect:'follow'})
     .then(function(res){ return res.json(); })
     .then(function(data){
-      if(data.error) throw new Error(data.error);
-      if(!data.vehicles) throw new Error('No data. Save from desktop first.');
+      if(data.error) return;
+      if(!data.vehicles) return;
       vehicles = data.vehicles;
       if(data.drivers) try{ localStorage.setItem('fleet_drivers_v1', JSON.stringify(data.drivers)); }catch(e){}
       if(data.maintLogs) maintLogs = data.maintLogs;
       try{ localStorage.setItem(LS.vehicles, JSON.stringify(vehicles)); }catch(e){}
       renderLoginDriverList();
-      if(status){
-        status.textContent = '✓ Loaded '+(data.drivers||[]).length+' drivers';
-        status.style.color='rgba(34,197,94,.9)';
-      }
     })
-    .catch(function(e){
-      if(status){ status.textContent='✗ '+(e.message||'Failed'); status.style.color='rgba(239,68,68,.9)'; }
-    });
+    .catch(function(e){ console.warn('Auto-sync failed:', e.message); });
 }
 
 // ── Admin PIN ────────────────────────────────────────────────────────────
@@ -1142,12 +1151,9 @@ function showLoginScreen(){
   const el = document.getElementById('scr-login');
   if(el) el.style.display='flex';
   document.body.style.overflow='hidden';
-  // Pre-fill sync URL
-  const savedUrl = localStorage.getItem('fleet_sync_url')||'';
-  const urlEl = document.getElementById('login-sync-url');
-  if(urlEl && savedUrl) urlEl.value = savedUrl;
   renderLoginDriverList();
-  // Auto-load drivers if URL saved but no drivers yet
+  // Auto-load from sheets if URL saved but no drivers yet
+  const savedUrl = localStorage.getItem('fleet_sync_url')||'';
   const savedDrivers = JSON.parse(localStorage.getItem('fleet_drivers_v1')||'[]');
   if(savedUrl && !savedDrivers.length) loginSync();
 }
@@ -1169,13 +1175,14 @@ function renderLoginDriverList(){
     return;
   }
   list.innerHTML = drivers.map(d=>`
-    <button class="driver-btn" onclick="selectLoginDriver('${d.id}','${d.name.replace(/'/g,"\'")}')">
-      <span style="font-size:24px">👤</span>
-      <div>
-        <div style="font-weight:700">${d.name}</div>
-        ${d.role==='supervisor'?'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:1px">Supervisor</div>':''}
+    <button onclick="selectLoginDriver('${d.id}','${d.name.replace(/'/g,"\'")}')"
+      style="width:100%;padding:16px 18px;border-radius:16px;background:#0f1e30;border:2px solid #2d4a6b;color:#ffffff;font-size:16px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;text-align:left;display:flex;align-items:center;gap:14px;box-shadow:0 3px 10px rgba(0,0,0,.4);-webkit-tap-highlight-color:transparent">
+      <div style="width:46px;height:46px;border-radius:50%;background:rgba(14,165,233,.2);border:2px solid rgba(14,165,233,.4);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👤</div>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:700;color:#ffffff">${d.name}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px">${d.role==='supervisor'?'Supervisor':'Driver'}</div>
       </div>
-      <span style="margin-left:auto;font-size:18px;color:rgba(255,255,255,.3)">›</span>
+      <div style="font-size:24px;color:rgba(255,255,255,.3)">›</div>
     </button>`).join('');
 }
 
