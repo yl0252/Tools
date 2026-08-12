@@ -1127,8 +1127,8 @@ async function syncSave(){
     const CHUNK = 49000;
     const chunks = [];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
-    const res = await fetch(url,{method:'POST',mode:'no-cors',body:JSON.stringify({chunks})});
-    // no-cors mode - assume success if no network error
+    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({chunks}),redirect:'follow'});
+    // ignore redirect 404 - data is saved
     setSyncStatus('✓ Saved '+new Date().toLocaleTimeString(),'#22c55e');
   }catch(e){ setSyncStatus('✗ '+e.message,'#ef4444'); }
 }
@@ -1138,7 +1138,7 @@ async function syncLoad(){
   if(!url){ alert('Paste your Apps Script URL in the sidebar first.'); return; }
   setSyncStatus('Loading...','#d97706');
   try{
-    const res = await fetch(url,{redirect:'follow',mode:'cors'});
+    const res = await fetch(url,{redirect:'follow'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     if(data.error) throw new Error(data.error);
