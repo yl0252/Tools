@@ -510,47 +510,13 @@ function selectVehicle(id){
   try{ localStorage.setItem(LS.selected, id); }catch(e){}
   renderVehiclePicker();
   const v = vehicles.find(x=>x.id===id);
-  document.getElementById('h-sub').textContent = v ? v.plate+((v.name||(v.make?(v.make+' '+(v.model||'')).trim():''))?' · '+(v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')):'') : '';
-  // Pre-fill driver name
+  const vname = v ? (v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')||'') : '';
+  document.getElementById('h-sub').textContent = v ? v.plate+(vname?' · '+vname:'') : '';
   if(settings.driverName) document.getElementById('dmg-driver').value = settings.driverName;
-  // Check if already logged in this session
-  try{
-    const sess = JSON.parse(sessionStorage.getItem('fleet_logged_in')||'null');
-    if(sess){
-      loggedInDriver = sess;
-      settings.driverName = sess.name;
-      document.getElementById('dmg-driver').value = sess.name;
-      document.getElementById('h-sub').textContent = sess.name+(sess.vehicleId?' · '+(vehicles.find(v=>v.id===sess.vehicleId)?.plate||''):'');
-      if(sess.vehicleId){ selectedVehicleId=sess.vehicleId; }
-    } else {
-      // Show login screen
-      setTimeout(showLoginScreen, 200);
-    }
-  }catch(e){ setTimeout(showLoginScreen, 200); }
-  // Morning checklist auto-popup
-  setTimeout(()=>{
-    const todayKey = new Date().toISOString().slice(0,10);
-    const done = JSON.parse(localStorage.getItem('fleet_cl_done_'+todayKey)||'null');
-    if(!done || done._reset){
-      // Auto-open checklist in the morning (before noon)
-      const hour = new Date().getHours();
-      if(hour < 12){
-        goScreen('scr-checklist','nb-checklist');
-      }
-    }
-  }, 800);
-  // Restore sync URL
-  try{
-    const savedUrl = localStorage.getItem('fleet_sync_url')||'';
-    const urlEl = document.getElementById('s-sync-url');
-    if(urlEl && savedUrl) urlEl.value = savedUrl;
-    // Also fill login screen URL and hide if already set
-    const loginUrlEl = document.getElementById('login-sync-url');
-    if(loginUrlEl && savedUrl){ loginUrlEl.value = savedUrl; }
-    const firstTime = document.getElementById('first-time-sync');
-    if(firstTime && savedUrl) firstTime.style.display='none';
-  }catch(e){}
+  // Go to mileage screen after selecting vehicle
+  goScreen('scr-mileage','nb-mileage');
 }
+
 
 // ── Mileage ───────────────────────────────────────────────────────────────
 async function handleMileagePhoto(input){
