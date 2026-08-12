@@ -511,9 +511,10 @@ function selectVehicle(id){
   renderVehiclePicker();
   const v = vehicles.find(x=>x.id===id);
   const vname = v ? (v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')||'') : '';
-  document.getElementById('h-sub').textContent = v ? v.plate+(vname?' · '+vname:'') : '';
+  document.getElementById('h-sub').textContent = loggedInDriver
+    ? loggedInDriver.name+' · '+(v?v.plate:'')
+    : (v ? v.plate+(vname?' · '+vname:'') : '');
   if(settings.driverName) document.getElementById('dmg-driver').value = settings.driverName;
-  // Go to mileage screen after selecting vehicle
   goScreen('scr-mileage','nb-mileage');
 }
 
@@ -1356,12 +1357,44 @@ async function mobileSyncLoad(){
 // ── Init ──────────────────────────────────────────────────────────────────
 hydrate();
 renderVehiclePicker();
-if(selectedVehicleId){
-  const v = vehicles.find(x=>x.id===selectedVehicleId);
-  if(v) document.getElementById('h-sub').textContent = v.plate+(v.name?' · '+v.name:'');
-}
-// Pre-fill driver name
 if(settings.driverName) document.getElementById('dmg-driver').value = settings.driverName;
+
+// Restore sync URL
+try{
+  const savedUrl = localStorage.getItem('fleet_sync_url')||'';
+  const urlEl = document.getElementById('s-sync-url');
+  if(urlEl && savedUrl) urlEl.value = savedUrl;
+  const loginUrlEl = document.getElementById('login-sync-url');
+  if(loginUrlEl && savedUrl) loginUrlEl.value = savedUrl;
+  const firstTime = document.getElementById('first-time-sync');
+  if(firstTime && savedUrl) firstTime.style.display='none';
+}catch(e){}
+
+// Check session — show login if not logged in, skip if already in session
+try{
+  const sess = JSON.parse(sessionStorage.getItem('fleet_logged_in')||'null');
+  if(sess){
+    // Already logged in this session — restore state
+    loggedInDriver = sess;
+    settings.driverName = sess.name;
+    document.getElementById('dmg-driver').value = sess.name;
+    const sv = sess.vehicleId ? vehicles.find(v=>v.id===sess.vehicleId) : null;
+    document.getElementById('h-sub').textContent = sess.name+(sv?' · '+sv.plate:'');
+    if(sess.vehicleId) selectedVehicleId = sess.vehicleId;
+    // Morning checklist auto-popup
+    setTimeout(()=>{
+      const todayKey = new Date().toISOString().slice(0,10);
+      const done = JSON.parse(localStorage.getItem('fleet_cl_done_'+todayKey)||'null');
+      if(!done || done._reset){
+        const hour = new Date().getHours();
+        if(hour < 12) goScreen('scr-checklist','nb-checklist');
+      }
+    }, 800);
+  } else {
+    // Not logged in — show login screen
+    setTimeout(showLoginScreen, 300);
+  }
+}catch(e){ setTimeout(showLoginScreen, 300); }
 </script>
 
 <script>
