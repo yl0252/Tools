@@ -520,45 +520,49 @@ async function handleMileagePhoto(input){
     document.getElementById('mileage-loading').style.display='flex';
     document.getElementById('mileage-result').style.display='none';
     // Try AI reading
-    const miles = await readOdometerWithAI(e.target.result.split(',')[1]);
-    document.getElementById('mileage-loading').style.display='none';
-    document.getElementById('mileage-result').style.display='block';
-    if(miles){
+    readOdometerWithAI(e.target.result.split(',')[1]).then(function(miles){
+      document.getElementById('mileage-loading').style.display='none';
+      document.getElementById('mileage-result').style.display='block';
+      if(miles){
       document.getElementById('mile-ai-val').textContent = Number(miles).toLocaleString()+' mi';
       document.getElementById('mile-ai-sub').textContent = 'AI read this value — confirm or correct';
       document.getElementById('mile-confirm').value = miles;
-    } else {
-      document.getElementById('mile-ai-val').textContent = 'Not detected';
-      document.getElementById('mile-ai-sub').textContent = 'Enter the mileage manually below';
-    }
+      } else {
+        document.getElementById('mile-ai-val').textContent = 'Not detected';
+        document.getElementById('mile-ai-sub').textContent = 'Enter the mileage manually below';
+      }
+    });
   };
   reader.readAsDataURL(file);
 }
 
 async function readOdometerWithAI(base64){
-  const apiKey = settings.apiKey;
-  if(!apiKey) return null;
-  try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:100,
-        messages:[{
-          role:'user',
-          content:[
-            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-            {type:'text',text:'Read the odometer or mileage display in this photo. Reply with ONLY the number (digits only, no units, no text). If you cannot read it clearly, reply with "0".'}
-          ]
-        }]
-      })
-    });
-    const data = await res.json();
-    const txt = data?.content?.[0]?.text?.trim()||'';
+  const apiKey = (window.settings && window.settings.apiKey)
+    || JSON.parse(localStorage.getItem('fleet_driver_settings')||'{}').apiKey
+    || '';
+  if(!apiKey) return Promise.resolve(null);
+  return fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:100,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
+          {type:'text',text:'Read the odometer or mileage display in this photo. Reply with ONLY the number (digits only, no units, no text). If you cannot read it clearly, reply with "0".'}
+        ]
+      }]
+    })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    const txt = (data && data.content && data.content[0] && data.content[0].text)||'';
     const num = parseInt(txt.replace(/\D/g,''));
     return isNaN(num)||num===0 ? null : num;
-  }catch(e){ return null; }
+  })
+  .catch(function(){ return null; });
 }
 
 function resetMileage(){
