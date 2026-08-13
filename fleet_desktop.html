@@ -172,6 +172,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="nav-item" onclick="showTab('damage',this)"><span class="ni">📸</span>Damage Reports<span class="nav-badge" id="nb-damage" style="background:var(--red)">0</span></div>
     <div class="nav-item" onclick="showTab('checklist',this)"><span class="ni">☑️</span>Checklists</div>
     <div class="nav-item" onclick="showTab('drivers',this)"><span class="ni">👤</span>Drivers</div>
+    <div class="nav-item" onclick="showTab('tracking',this)"><span class="ni">🗺</span>Live Tracking</div>
     <div style="margin-top:auto;padding:16px">
       <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:6px">☁️ Google Sheets Sync</div>
       <input class="form-input" id="sync-url" placeholder="Apps Script URL" style="font-size:11px;padding:6px 10px" oninput="saveSyncUrl()">
@@ -273,6 +274,44 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <div style="margin-top:14px;background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--text2)">
         💡 After adding drivers, click <strong>⬆ Save to Sheets</strong> to sync the driver list to all mobile devices. Drivers tap <strong>⬇ Load</strong> in Settings to get the latest list.
+      </div>
+    </div>
+
+    <!-- TRACKING TAB -->
+    <div id="tab-tracking" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div>
+          <div class="section-title" style="margin-bottom:4px">🗺 Live Tracking</div>
+          <div style="font-size:11px;color:var(--text3)">Real-time truck locations — updates when drivers sync</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost" onclick="refreshTracking()">↻ Refresh</button>
+          <span id="tracking-last-update" style="font-size:11px;color:var(--text3)"></span>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">
+        <div id="fleet-map" style="width:100%;height:420px;background:#1a2d42;display:flex;align-items:center;justify-content:center">
+          <div style="text-align:center;color:var(--text3)">
+            <div style="font-size:32px;margin-bottom:10px">🗺</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px">Map loading...</div>
+            <div style="font-size:11px">Add your Google Maps API key in settings to see the map</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vehicle location cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px" id="tracking-cards"></div>
+
+      <!-- Google Maps API key setting -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">Google Maps API Key (optional — for map display)</div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="maps-api-key" placeholder="AIza..." style="font-size:12px;flex:1" oninput="saveMapsKey()">
+          <button class="btn btn-primary" onclick="loadMap()">Load Map</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px">Get a free key at console.cloud.google.com → Maps JavaScript API. Without it you still see location data in the cards below.</div>
       </div>
     </div>
 
@@ -534,7 +573,7 @@ function getVehicleStatus(v){
 
 // ── Nav / Tabs ─────────────────────────────────────────────────────────────
 function showTab(tab, el){
-  ['overview','mileage','maintenance','damage','checklist','drivers'].forEach(t=>{
+  ['overview','mileage','maintenance','damage','checklist','drivers','tracking'].forEach(t=>{
     document.getElementById('tab-'+t).style.display = t===tab?'':'none';
   });
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -545,6 +584,7 @@ function showTab(tab, el){
   if(tab==='damage') renderDamage();
   if(tab==='checklist') renderChecklistLog();
   if(tab==='drivers') renderDrivers();
+  if(tab==='tracking'){ refreshTracking(); const k=localStorage.getItem('fleet_maps_key'); if(k){ const el=document.getElementById('maps-api-key'); if(el) el.value=k; } }
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────
@@ -1065,6 +1105,137 @@ function saveDriver(){
 function deleteDriver(id){
   loadDrivers();
   if(confirm('Remove this driver account?')){ drivers=drivers.filter(d=>d.id!==id); saveDrivers(); renderDrivers(); }
+}
+
+// ── Live Tracking ────────────────────────────────────────────────────────
+let trackingLocations = {};
+let mapInstance = null;
+let mapMarkers = {};
+
+function renderTrackingCards(){
+  // Load locations from localStorage (shared with mobile on same device)
+  // and from last sync data
+  try{
+    const local = JSON.parse(localStorage.getItem('fleet_locations')||'{}');
+    Object.assign(trackingLocations, local);
+  }catch(e){}
+
+  const cards = document.getElementById('tracking-cards');
+  if(!cards) return;
+
+  if(!Object.keys(trackingLocations).length){
+    cards.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:10px">📍</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:6px">No locations yet</div>
+      <div style="font-size:11px;line-height:1.7">Drivers need to tap the 📍 button in the mobile app to share their location.<br>Make sure they're logged in and have selected their truck.</div>
+    </div>`;
+    return;
+  }
+
+  cards.innerHTML = Object.values(trackingLocations).map(loc=>{
+    const v = vehicles.find(x=>x.id===loc.vehicleId);
+    const mins = Math.round((Date.now()-new Date(loc.timestamp))/60000);
+    const fresh = mins < 5;
+    const mapsUrl = `https://www.google.com/maps?q=${loc.lat},${loc.lng}`;
+    return `<div style="background:var(--surface);border:1px solid ${fresh?'rgba(34,197,94,.3)':'var(--border)'};border-radius:12px;padding:16px;border-left:4px solid ${fresh?'var(--green)':'var(--text3)'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--blue)">${loc.plate||v?.plate||'?'}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${v?.name||''} · ${loc.driver||'Unknown driver'}</div>
+        </div>
+        <span style="font-size:10px;padding:3px 8px;border-radius:8px;font-weight:700;background:${fresh?'rgba(34,197,94,.15)':'rgba(255,255,255,.06)'};color:${fresh?'var(--green)':'var(--text3)'}">
+          ${fresh?'● LIVE':mins+'m ago'}
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Speed</div>
+          <div style="font-size:16px;font-weight:700;font-family:var(--mono)">${loc.speed||0} <span style="font-size:10px;font-weight:400">mph</span></div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;font-weight:700;margin-bottom:3px">Updated</div>
+          <div style="font-size:12px;font-weight:600">${new Date(loc.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+        📍 ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} · ±${loc.accuracy}m
+      </div>
+      <a href="${mapsUrl}" target="_blank" style="display:block;text-align:center;padding:7px;background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.25);border-radius:8px;color:var(--blue);font-size:12px;font-weight:700;text-decoration:none">
+        🗺 Open in Google Maps
+      </a>
+    </div>`;
+  }).join('');
+
+  document.getElementById('tracking-last-update').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+
+  // Update map markers if map is loaded
+  updateMapMarkers();
+}
+
+function refreshTracking(){
+  // Pull latest from sheets
+  const url = document.getElementById('sync-url')?.value.trim()||localStorage.getItem(LS_SYNC)||'';
+  if(url){
+    fetch(url+'?action=locations',{redirect:'follow'})
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.locations) Object.assign(trackingLocations, data.locations);
+        renderTrackingCards();
+      }).catch(()=>renderTrackingCards());
+  } else {
+    renderTrackingCards();
+  }
+}
+
+function saveMapsKey(){
+  try{ localStorage.setItem('fleet_maps_key', document.getElementById('maps-api-key').value); }catch(e){}
+}
+
+function loadMap(){
+  const key = document.getElementById('maps-api-key')?.value.trim()
+    || localStorage.getItem('fleet_maps_key')||'';
+  if(!key){ alert('Enter your Google Maps API key first.'); return; }
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
+  script.async = true;
+  window.initMap = function(){
+    const center = {lat:40.7128,lng:-74.0060};
+    mapInstance = new google.maps.Map(document.getElementById('fleet-map'),{
+      zoom:10, center,
+      styles:[{elementType:'geometry',stylers:[{color:'#1a2d42'}]},
+              {elementType:'labels.text.fill',stylers:[{color:'#94a3b8'}]},
+              {featureType:'road',elementType:'geometry',stylers:[{color:'#243d5a'}]}]
+    });
+    updateMapMarkers();
+  };
+  document.head.appendChild(script);
+}
+
+function updateMapMarkers(){
+  if(!mapInstance || !window.google) return;
+  Object.values(trackingLocations).forEach(loc=>{
+    const v = vehicles.find(x=>x.id===loc.vehicleId);
+    const id = loc.vehicleId;
+    if(mapMarkers[id]) mapMarkers[id].setPosition({lat:loc.lat,lng:loc.lng});
+    else {
+      mapMarkers[id] = new google.maps.Marker({
+        position:{lat:loc.lat,lng:loc.lng},
+        map:mapInstance,
+        title:(v?.plate||loc.plate||'?')+' · '+(loc.driver||''),
+        label:{text:v?.plate||'?',color:'#fff',fontWeight:'700',fontSize:'11px'},
+        icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:6,
+              fillColor:'#0ea5e9',fillOpacity:1,strokeColor:'#fff',strokeWeight:1.5,
+              rotation:0}
+      });
+    }
+  });
+  // Fit map to all markers
+  if(Object.keys(mapMarkers).length > 0){
+    const bounds = new google.maps.LatLngBounds();
+    Object.values(mapMarkers).forEach(m=>bounds.extend(m.getPosition()));
+    mapInstance.fitBounds(bounds);
+  }
 }
 
 function exportData(){

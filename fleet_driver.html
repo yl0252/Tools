@@ -127,7 +127,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <!-- Driver selector -->
   <div id="login-driver-step" style="width:100%;max-width:420px">
     <div id="login-driver-list" style="display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow-y:auto;background:transparent"></div>
-    <div style="margin-top:16px;text-align:center;font-size:12px;color:rgba(255,255,255,.25)">Not listed? Ask your manager to add you.</div>
+    <div id="login-not-listed" style="margin-top:16px;text-align:center;font-size:12px;color:rgba(255,255,255,.25)">Not listed? Ask your manager to add you.</div>
   </div>
 
   <!-- PIN entry -->
@@ -188,6 +188,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="header-title">🚛 Fleet Driver <span style="font-size:10px;opacity:.4;font-weight:400">v4</span></div>
       <div class="header-sub" id="h-sub">Select your vehicle to start</div>
     </div>
+    <button onclick="toggleLang()" id="lang-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-right:6px">🌐 ES</button>
+    <button onclick="startTracking()" id="track-btn" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-right:6px">📍 Off</button>
     <button onclick="driverSync()" id="sync-btn" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.4);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">☁️ Sync</button>
   </div>
   <div id="driver-sync-msg" style="font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:3px;min-height:13px"></div>
@@ -196,8 +198,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- SCREEN: Vehicle Select -->
 <div class="screen active" id="scr-select">
   <div style="margin-bottom:14px">
-    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Your Vehicle</div>
-    <div style="font-size:11px;color:var(--text3)">Tap to select the vehicle you're driving today</div>
+    <div id="vehicle-screen-title" style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Your Vehicle</div>
+    <div id="vehicle-screen-sub" style="font-size:11px;color:var(--text3)">Tap to select the vehicle you're driving today</div>
   </div>
   <div class="vehicle-picker" id="vehicle-picker">
     <div style="text-align:center;padding:40px;color:var(--text3)">
@@ -212,41 +214,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div class="screen" id="scr-mileage">
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📸 Odometer Photo</div>
-      <span style="font-size:11px;color:var(--text3)">AI reads the mileage</span>
+      <div class="card-title" id="lbl-log-mileage">📍 Log Mileage</div>
+      <span style="font-size:11px;color:var(--text3)" id="lbl-vehicle-plate"></span>
     </div>
     <div class="card-body">
-      <div id="mileage-upload-area">
-        <div class="upload-area" id="mile-upload-zone">
-          <input type="file" accept="image/*" capture="environment" class="upload-input" onchange="handleMileagePhoto(this)">
-          <div class="upload-icon">📷</div>
-          <div class="upload-title">Take odometer photo</div>
-          <div class="upload-sub">Or tap to choose from gallery</div>
-        </div>
-      </div>
-      <div id="mileage-loading" style="display:none" class="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Reading odometer with AI…<br>This takes a few seconds</div>
-      </div>
-      <div id="mileage-result" style="display:none">
-        <img id="mile-preview" class="photo-preview" style="margin-bottom:12px" src="" alt="odometer">
-        <div class="ai-result" id="mile-ai-box">
-          <div class="ai-result-label">📍 AI Read Mileage</div>
-          <div class="ai-result-value" id="mile-ai-val">—</div>
-          <div class="ai-result-sub" id="mile-ai-sub">Confirm or correct below</div>
-        </div>
-        <label class="f-label">Confirm Mileage (mi)</label>
-        <input class="f-input mono" id="mile-confirm" type="number" placeholder="0">
-        <label class="f-label">Notes (optional)</label>
-        <input class="f-input" id="mile-notes" placeholder="Route, observations...">
-        <button class="btn-full btn-blue" onclick="submitMileage()" style="margin-top:4px">✓ Submit Reading</button>
-        <button class="btn-full btn-ghost" onclick="resetMileage()" style="margin-top:10px">↩ Retake Photo</button>
-      </div>
+      <label class="f-label" id="lbl-odometer">Odometer Reading (miles)</label>
+      <input class="f-input" id="mile-confirm" type="number" inputmode="numeric" placeholder="e.g. 47382" style="font-size:28px;font-family:monospace;font-weight:700;text-align:center;padding:16px;margin-bottom:16px">
+      <label class="f-label" id="lbl-date">Date</label>
+      <input class="f-input" id="lm-date" type="date" style="margin-bottom:16px">
+      <label class="f-label" id="lbl-notes">Notes (optional)</label>
+      <input class="f-input" id="mile-notes" placeholder="Route, observations..." style="margin-bottom:16px">
+      <button class="btn-full btn-blue" onclick="submitMileage()" style="padding:16px;font-size:16px;font-weight:700" id="btn-submit-mileage">✓ Submit Reading</button>
     </div>
   </div>
-  <!-- Recent readings -->
   <div class="card">
-    <div class="card-header"><div class="card-title">Recent Readings</div></div>
+    <div class="card-header"><div class="card-title" id="lbl-recent">Recent Readings</div></div>
     <div class="card-body" id="mile-history" style="padding:0"></div>
   </div>
 </div>
@@ -255,13 +237,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div class="screen" id="scr-damage">
   <div id="damage-submitted-banner" style="display:none" class="damage-submitted">
     <div class="icon">✅</div>
-    <div class="title">Damage Report Sent</div>
-    <div class="sub">The office has been notified. They will follow up with you.</div>
+    <div class="title" id="damage-submitted-title">Damage Report Sent</div>
+    <div class="sub" id="damage-submitted-sub">The office has been notified. They will follow up with you.</div>
   </div>
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">🚨 Report Damage</div>
+      <div class="card-title" id="dmg-card-title">🚨 Report Damage</div>
       <span style="font-size:11px;color:var(--red);font-weight:600">Urgent</span>
     </div>
     <div class="card-body">
@@ -276,16 +258,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <img id="dmg-preview" class="photo-preview" style="display:none;margin-bottom:12px" src="" alt="damage">
       <button id="dmg-retake-btn" style="display:none;width:100%;margin-bottom:12px;padding:8px;border-radius:8px;background:#f0f4f8;border:1px solid var(--border);font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font)" onclick="resetDamagePhoto()">↩ Retake Photo</button>
 
-      <label class="f-label">Your Name</label>
+      <label class="f-label" id="dmg-your-name-lbl">Your Name</label>
       <input class="f-input" id="dmg-driver" placeholder="Your name">
 
-      <label class="f-label">What happened?</label>
+      <label class="f-label" id="dmg-what-happened-lbl">What happened?</label>
       <textarea class="f-input" id="dmg-desc" rows="3" style="resize:none;height:80px;font-size:14px" placeholder="Describe the damage — where, how it happened..."></textarea>
 
-      <label class="f-label">Location / Address</label>
+      <label class="f-label" id="dmg-location-lbl">Location / Address</label>
       <input class="f-input" id="dmg-location" placeholder="Where did this happen?">
 
-      <button class="btn-full btn-red" onclick="submitDamage()" style="margin-top:4px">🚨 Submit Damage Report</button>
+      <button class="btn-full btn-red" id="btn-submit-damage" onclick="submitDamage()" style="margin-top:4px">🚨 Submit Damage Report</button>
     </div>
   </div>
 </div>
@@ -299,7 +281,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div class="screen" id="scr-settings">
   <div class="card">
     <div class="card-header">
-      <div class="card-title">⚙️ Admin Settings</div>
+      <div class="card-title" id="settings-title">⚙️ Admin Settings</div>
       <span style="font-size:10px;background:rgba(239,68,68,.12);color:#ef4444;padding:2px 8px;border-radius:6px;font-weight:700">🔐 Admin</span>
     </div>
     <div class="card-body">
@@ -312,7 +294,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><div class="card-title">☁️ Google Sheets Sync</div></div>
+    <div class="card-header"><div class="card-title" id="settings-sync-title">☁️ Google Sheets Sync</div></div>
     <div class="card-body">
       <label class="f-label">Apps Script URL</label>
       <input class="f-input" id="s-sync-url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px">
@@ -323,9 +305,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div id="m-sync-status" style="font-size:11px;color:var(--text3);text-align:center;min-height:16px;padding:4px"></div>
     </div>
   </div>
-  <button class="btn-full btn-blue" onclick="saveAdminSettings()" style="padding:14px;font-size:15px;margin-bottom:14px">💾 Save Settings</button>
+  <button class="btn-full btn-blue" id="settings-save-btn" onclick="saveAdminSettings()" style="padding:14px;font-size:15px;margin-bottom:14px">💾 Save Settings</button>
   <div class="card">
-    <div class="card-header"><div class="card-title">👤 Session</div></div>
+    <div class="card-header"><div class="card-title" id="settings-session-title">👤 Session</div></div>
     <div class="card-body">
       <div id="session-info" style="font-size:13px;color:var(--text);margin-bottom:14px"></div>
       <button class="btn-full btn-ghost" onclick="logOut()" style="padding:11px">🚪 Log Out</button>
@@ -347,12 +329,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div id="cl-intro" style="margin-bottom:14px">
     <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">🌅 Morning Inspection</div>
     <div style="font-size:11px;color:var(--text3)" id="cl-date"></div>
+    <div style="font-size:11px;color:var(--text3)" id="cl-subtitle">Complete all items before departure</div>
   </div>
   <div id="cl-already-done" style="display:none;background:rgba(34,197,94,.08);border:2px solid rgba(34,197,94,.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px">
     <div style="font-size:32px;margin-bottom:8px">✅</div>
     <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">Checklist Complete</div>
     <div style="font-size:11px;color:var(--text3)">You already completed today's inspection.</div>
-    <button class="btn-full btn-ghost" onclick="resetChecklist()" style="margin-top:14px;padding:10px">Redo Inspection</button>
+    <button class="btn-full btn-ghost" id="cl-redo-btn" onclick="resetChecklist()" style="margin-top:14px;padding:10px">Redo Inspection</button>
   </div>
   <div id="cl-form">
     <div class="card" style="margin-bottom:12px">
@@ -363,9 +346,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="card-body" style="padding:0" id="cl-items"></div>
     </div>
     <div class="card" style="margin-bottom:12px">
-      <div class="card-header"><div class="card-title">📷 Inspection Photo</div></div>
+      <div class="card-header"><div class="card-title" id="cl-photo-title">📷 Inspection Photo</div></div>
       <div class="card-body">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Take a photo of the vehicle before departure — uploaded to Google Drive automatically.</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px" id="cl-photo-sub-txt">Take a photo of the vehicle before departure — uploaded to Google Drive automatically.</div>
         <div class="upload-area" id="cl-upload-zone" style="padding:18px">
           <input type="file" accept="image/*" capture="environment" class="upload-input" onchange="handleChecklistPhoto(this)">
           <div class="upload-icon" style="font-size:28px">📷</div>
@@ -377,7 +360,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
     <div class="card" style="margin-bottom:12px">
-      <div class="card-header"><div class="card-title">📝 Notes</div></div>
+      <div class="card-header"><div class="card-title" id="cl-notes-title">📝 Notes</div></div>
       <div class="card-body">
         <textarea class="f-input" id="cl-notes" rows="3" style="resize:none;height:70px;font-size:13px;margin-bottom:0" placeholder="Anything to note before departure..."></textarea>
       </div>
@@ -468,16 +451,20 @@ function goScreen(id, nb){
 
 // ── Vehicle Picker ────────────────────────────────────────────────────────
 function renderVehiclePicker(){
-  if(!vehicles.length){
+  const assignedVid = loggedInDriver ? loggedInDriver.vehicleId : null;
+  const list = assignedVid ? vehicles.filter(v=>v.id===assignedVid) : vehicles;
+
+  if(!list.length){
     document.getElementById('vehicle-picker').innerHTML = `
       <div style="text-align:center;padding:40px;color:var(--text3)">
         <div style="font-size:32px;margin-bottom:10px">🚛</div>
-        <div style="font-size:14px;font-weight:600;margin-bottom:6px">No vehicles set up</div>
-        <div style="font-size:11px;line-height:1.6">Vehicles are added from the office dashboard.</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px">${assignedVid?t('no-vehicle'):'No vehicles set up'}</div>
+        <div style="font-size:11px;line-height:1.6">${assignedVid?t('contact-manager'):'Vehicles are added from the office dashboard.'}</div>
       </div>`;
     return;
   }
-  document.getElementById('vehicle-picker').innerHTML = vehicles.map(v=>{
+
+  document.getElementById('vehicle-picker').innerHTML = list.map(v=>{
     const status = getVehicleStatus(v);
     const dotCls = status==='ok'?'dot-ok':status==='warn'?'dot-warn':'dot-danger';
     const latest = getLatestMileage(v.id);
@@ -487,7 +474,7 @@ function renderVehiclePicker(){
       <div class="vpick-plate">${v.plate}</div>
       <div class="vpick-info">
         <div class="vpick-name">${v.name||(v.make?(v.make+' '+(v.model||'')).trim():'')||'Vehicle'}</div>
-        <div class="vpick-driver">${v.driver||'No driver assigned'} · ${curMiles?Number(curMiles).toLocaleString()+' mi':'No readings'}</div>
+        <div class="vpick-driver">${curMiles?Number(curMiles).toLocaleString()+' mi':'No readings'}</div>
       </div>
       <div class="vpick-status ${dotCls}"></div>
     </div>`;
@@ -566,21 +553,19 @@ async function readOdometerWithAI(base64){
 }
 
 function resetMileage(){
-  milePhotoBase64 = null;
-  document.getElementById('mileage-upload-area').style.display='';
-  document.getElementById('mileage-result').style.display='none';
   document.getElementById('mile-confirm').value='';
+  document.getElementById('mile-notes').value='';
 }
 
 function submitMileage(){
-  if(!selectedVehicleId){ alert('Select a vehicle first.'); goScreen('scr-select','nb-select'); return; }
+  if(!selectedVehicleId){ alert(currentLang==='es'?'Selecciona un vehículo primero.':'Select a vehicle first.'); goScreen('scr-select','nb-select'); return; }
   const miles = parseFloat(document.getElementById('mile-confirm').value);
-  if(!miles){ alert('Enter or confirm the mileage reading.'); return; }
+  if(!miles){ alert(currentLang==='es'?'Ingresa el millaje.':'Enter the mileage reading.'); return; }
   const notes = document.getElementById('mile-notes').value;
   const entry = {
     id: Date.now()+'_'+Math.random().toString(36).slice(2),
     vehicleId: selectedVehicleId,
-    miles, date: new Date().toISOString().slice(0,10),
+    miles, date: (document.getElementById('lm-date')?.value)||new Date().toISOString().slice(0,10),
     driver: settings.driverName||'Driver',
     notes, source:'photo',
     photo: milePhotoBase64 ? 'data:image/jpeg;base64,'+milePhotoBase64 : null,
@@ -603,12 +588,11 @@ function renderMileHistory(){
   if(!logs.length){ document.getElementById('mile-history').innerHTML='<div style="padding:14px;font-size:12px;color:var(--text3);text-align:center">No readings yet</div>'; return; }
   document.getElementById('mile-history').innerHTML = logs.map(l=>{
     const v = vehicles.find(x=>x.id===l.vehicleId);
-    return `<div class="info-row" style="padding:10px 16px">
-      <div>
-        <div style="font-size:12px;font-weight:700;font-family:var(--mono)">${Number(l.miles).toLocaleString()} mi</div>
-        <div style="font-size:10px;color:var(--text3)">${v?v.plate:''} · ${l.date}</div>
+    return `<div class="info-row" style="padding:12px 16px">
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;font-family:monospace">${Number(l.miles).toLocaleString()} mi</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${v?v.plate+' · ':''} ${l.date} ${l.driver?'· '+l.driver:''}</div>
       </div>
-      ${l.photo?`<img src="${l.photo}" style="width:44px;height:34px;border-radius:6px;object-fit:cover" onclick="showPhoto('${l.photo}')">`:''}
     </div>`;
   }).join('');
 }
@@ -750,16 +734,16 @@ function showPhoto(src){ const w=window.open(); w.document.write('<img src="'+sr
 
 // ── Checklist ─────────────────────────────────────────────────────────────
 const CHECKLIST_ITEMS = [
-  {id:'lights',      label:'Lights & signals working',        icon:'💡'},
-  {id:'mirrors',     label:'Mirrors clean and adjusted',       icon:'🪞'},
-  {id:'tires',       label:'Tires inflated, no visible damage',icon:'🛞'},
-  {id:'brakes',      label:'Brakes feel normal',               icon:'🛑'},
-  {id:'wipers',      label:'Wipers working',                   icon:'🌧'},
-  {id:'fuel',        label:'Fuel level checked',               icon:'⛽'},
-  {id:'fluids',      label:'Oil & coolant level OK',           icon:'🔧'},
-  {id:'exterior',    label:'No new exterior damage',           icon:'🚛'},
-  {id:'cargo_secure',label:'Cargo secured (if applicable)',    icon:'📦'},
-  {id:'documents',   label:'Registration & insurance in vehicle',icon:'📋'},
+  {id:'lights',      en:'Lights & signals working',         es:'Luces y señales funcionando',        icon:'💡'},
+  {id:'mirrors',     en:'Mirrors clean and adjusted',        es:'Espejos limpios y ajustados',        icon:'🪞'},
+  {id:'tires',       en:'Tires inflated, no visible damage', es:'Llantas infladas, sin daño visible', icon:'🛞'},
+  {id:'brakes',      en:'Brakes feel normal',                es:'Frenos funcionan bien',               icon:'🛑'},
+  {id:'wipers',      en:'Wipers working',                    es:'Limpiaparabrisas funcionando',        icon:'🌧'},
+  {id:'fuel',        en:'Fuel level checked',                es:'Nivel de combustible revisado',       icon:'⛽'},
+  {id:'fluids',      en:'Oil & coolant level OK',            es:'Aceite y refrigerante OK',            icon:'🔧'},
+  {id:'exterior',    en:'No new exterior damage',            es:'Sin daños exteriores nuevos',         icon:'🚛'},
+  {id:'cargo_secure',en:'Cargo secured (if applicable)',     es:'Carga asegurada (si aplica)',         icon:'📦'},
+  {id:'documents',   en:'Registration & insurance in vehicle',es:'Registro y seguro en el vehículo',  icon:'📋'},
 ];
 
 let clChecked = {};
@@ -791,12 +775,13 @@ function renderChecklistItems(){
   document.getElementById('cl-submit-btn').style.opacity = checked===total ? '1':'0.5';
   document.getElementById('cl-items').innerHTML = CHECKLIST_ITEMS.map(item=>{
     const isChecked = !!clChecked[item.id];
+    const label = currentLang==='es' ? (item.es||item.en||item.label) : (item.en||item.label);
     return `<div onclick="toggleCheck('${item.id}')" style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:${isChecked?'rgba(34,197,94,.06)':'transparent'};transition:background .15s">
       <div style="width:24px;height:24px;border-radius:6px;border:2px solid ${isChecked?'var(--green)':'var(--border)'};background:${isChecked?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">
         ${isChecked?'<svg width="14" height="14" viewBox="0 0 14 14"><polyline points="2,7 5.5,11 12,3" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
       </div>
       <span style="font-size:16px">${item.icon}</span>
-      <span style="font-size:13px;font-weight:${isChecked?'600':'400'};color:${isChecked?'var(--text)':'var(--text2)'}">${item.label}</span>
+      <span style="font-size:13px;font-weight:${isChecked?'600':'400'};color:${isChecked?'var(--text)':'var(--text2)'}">${label}</span>
     </div>`;
   }).join('');
 }
@@ -865,7 +850,7 @@ async function submitChecklist(){
     vehiclePlate: v?v.plate:'',
     driver: settings.driverName||'Driver',
     date: todayKey,
-    items: CHECKLIST_ITEMS.map(item=>({...item, checked:!!clChecked[item.id]})),
+    items: CHECKLIST_ITEMS.map(item=>({...item, label:currentLang==='es'?(item.es||item.en||item.label):(item.en||item.label), checked:!!clChecked[item.id]})),
     notes: document.getElementById('cl-notes').value.trim(),
     photoUrl: clPhotoUrl||null,
     allPassed: checked===total,
@@ -925,6 +910,246 @@ function resetChecklist(){
   const todayKey = new Date().toISOString().slice(0,10);
   try{ localStorage.setItem('fleet_cl_done_'+todayKey, JSON.stringify({_reset:true})); }catch(e){}
   renderChecklist();
+}
+
+// ── Language / Translations ──────────────────────────────────────────────
+let currentLang = localStorage.getItem('fleet_lang')||'en';
+
+const LANG = {
+  en:{
+    'select-vehicle':'Your Vehicle',
+    'select-vehicle-sub':'Tap to select the vehicle you are driving today',
+    'log-mileage':'📍 Log Mileage',
+    'odometer':'Odometer Reading (miles)',
+    'date':'Date','notes':'Notes (optional)',
+    'notes-ph':'Route, observations...','submit-mileage':'✓ Submit Reading',
+    'recent':'Recent Readings','no-vehicle':'No vehicle assigned',
+    'contact-manager':'Contact your manager to assign a vehicle.',
+    'report-damage':'🚨 Report Damage','your-name':'Your Name',
+    'what-happened':'What happened?','damage-ph':'Describe the damage — where, how it happened...',
+    'location':'Location / Address','location-ph':'Where did this happen?',
+    'submit-damage':'🚨 Submit Damage Report',
+    'damage-sent':'✅ Damage Report Sent','damage-sent-sub':'The office has been notified.',
+    'my-vehicle':'My Vehicle','current-mileage':'Current Mileage',
+    'driver':'Driver','inspection':'Annual Inspection','insurance':'Insurance',
+    'last-oil':'Last Oil Change','attention':'⚠️ Attention Required',
+    'attention-sub':'This vehicle has an open issue. Check with the office before driving.',
+    'report-damage-btn':'🚨 Report Damage','log-mileage-btn':'📍 Log Mileage',
+    'checklist':'☑️ Morning Inspection','checklist-sub':'Complete all items before departure',
+    'inspection-photo':'📷 Inspection Photo',
+    'photo-sub':'Take a photo of the vehicle before departure.',
+    'checklist-notes':'📝 Notes','checklist-notes-ph':'Anything to note before departure...',
+    'submit-checklist':'✓ Submit Inspection','redo':'Redo Inspection',
+    'checklist-done':'✅ Checklist Complete','checklist-done-sub':"You already completed today's inspection.",
+    'sync':'☁️ Sync','vehicle-tab':'Vehicle','mileage-tab':'Mileage',
+    'damage-tab':'Damage','my-vehicle-tab':'My Vehicle','checklist-tab':'Checklist',
+    'settings-tab':'Settings','not-logged-in':'Not logged in','log-out':'🚪 Log Out',
+    'session':'👤 Session','about':'📋 About','selected-vehicle':'Selected Vehicle',
+    'logs-stored':'Logs stored','admin-settings':'⚙️ Admin Settings',
+    'admin-pin-lbl':'Admin PIN','api-key-lbl':'Claude API Key (AI odometer reading)',
+    'save-settings':'💾 Save Settings','sync-lbl':'☁️ Google Sheets Sync',
+    'sync-url-ph':'Apps Script URL','load-sheets':'⬇ Load from Sheets','save-sheets':'⬆ Save to Sheets',
+    'select-name':'Who are you?','not-listed':'Not listed? Ask your manager to add you.',
+    'hi':'Hi','enter-pin':'enter your PIN','back':'‹ Back',
+  },
+  es:{
+    'select-vehicle':'Tu Vehículo',
+    'select-vehicle-sub':'Toca para seleccionar el vehículo que manejas hoy',
+    'log-mileage':'📍 Registrar Millaje',
+    'odometer':'Lectura del Odómetro (millas)',
+    'date':'Fecha','notes':'Notas (opcional)',
+    'notes-ph':'Ruta, observaciones...','submit-mileage':'✓ Enviar Lectura',
+    'recent':'Lecturas Recientes','no-vehicle':'Sin vehículo asignado',
+    'contact-manager':'Contacta a tu gerente para asignar un vehículo.',
+    'report-damage':'🚨 Reportar Daño','your-name':'Tu Nombre',
+    'what-happened':'¿Qué pasó?','damage-ph':'Describe el daño — dónde, cómo ocurrió...',
+    'location':'Lugar / Dirección','location-ph':'¿Dónde ocurrió esto?',
+    'submit-damage':'🚨 Enviar Reporte de Daño',
+    'damage-sent':'✅ Reporte Enviado','damage-sent-sub':'Se notificó a la oficina.',
+    'my-vehicle':'Mi Vehículo','current-mileage':'Millaje Actual',
+    'driver':'Conductor','inspection':'Inspección Anual','insurance':'Seguro',
+    'last-oil':'Último Cambio de Aceite','attention':'⚠️ Atención Requerida',
+    'attention-sub':"Este vehículo tiene un problema. Consulta con la oficina antes de salir.",
+    'report-damage-btn':'🚨 Reportar Daño','log-mileage-btn':'📍 Registrar Millaje',
+    'checklist':'☑️ Inspección Matutina','checklist-sub':'Completa todos los puntos antes de salir',
+    'inspection-photo':'📷 Foto de Inspección',
+    'photo-sub':'Take a photo of the vehicle before departure.',
+    'checklist-notes':'📝 Notas','checklist-notes-ph':'¿Algo que reportar antes de salir?',
+    'submit-checklist':'✓ Enviar Inspección','redo':'Repetir Inspección',
+    'checklist-done':'✅ Lista Completa','checklist-done-sub':'Ya completaste la inspección de hoy.',
+    'sync':'☁️ Sincronizar','vehicle-tab':'Vehículo','mileage-tab':'Millaje',
+    'damage-tab':'Daño','my-vehicle-tab':'Mi Vehículo','checklist-tab':'Lista',
+    'settings-tab':'Ajustes','not-logged-in':'No conectado','log-out':'🚪 Cerrar Sesión',
+    'session':'👤 Sesión','about':'📋 Acerca de','selected-vehicle':'Vehículo Asignado',
+    'logs-stored':'Registros guardados','admin-settings':'⚙️ Ajustes de Admin',
+    'admin-pin-lbl':'PIN de Admin','api-key-lbl':'Clave API de Claude',
+    'save-settings':'💾 Guardar Ajustes','sync-lbl':'☁️ Sincronización Google Sheets',
+    'sync-url-ph':'URL del Apps Script','load-sheets':'⬇ Cargar de Sheets','save-sheets':'⬆ Guardar en Sheets',
+    'select-name':'¿Quién eres?','not-listed':'¿No apareces? Pide a tu gerente que te agregue.',
+    'hi':'Hola','enter-pin':'ingresa tu PIN','back':'‹ Atrás',
+  }
+};
+
+function t(key){ return (LANG[currentLang]||LANG.en)[key]||key; }
+
+function applyLang(){
+  const L = LANG[currentLang]||LANG.en;
+  // Nav buttons - find last text node and update it
+  [['nb-select','vehicle-tab'],['nb-mileage','mileage-tab'],['nb-damage','damage-tab'],
+   ['nb-vehicle','my-vehicle-tab'],['nb-checklist','checklist-tab'],['nb-settings','settings-tab']
+  ].forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const nodes=[...el.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim());
+    if(nodes.length) nodes[nodes.length-1].textContent=L[key];
+  });
+  // Vehicle screen
+  setTxt('vehicle-screen-title', L['select-vehicle']);
+  setTxt('vehicle-screen-sub', L['select-vehicle-sub']);
+  // Mileage screen
+  setTxt('lbl-log-mileage', L['log-mileage']);
+  setTxt('lbl-odometer', L['odometer']);
+  setTxt('lbl-date', L['date']);
+  setTxt('lbl-notes', L['notes']);
+  setTxt('btn-submit-mileage', L['submit-mileage']);
+  setTxt('lbl-recent', L['recent']);
+  setPlaceholder('mile-notes', L['notes-ph']);
+  setPlaceholder('mile-confirm', currentLang==='es'?'ej. 47382':'e.g. 47382');
+  // Damage screen
+  setTxt('dmg-card-title', L['report-damage']);
+  setTxt('dmg-your-name-lbl', L['your-name']);
+  setTxt('dmg-what-happened-lbl', L['what-happened']);
+  setTxt('dmg-location-lbl', L['location']);
+  setPlaceholder('dmg-driver', currentLang==='es'?'Tu nombre':'Your name');
+  setPlaceholder('dmg-desc', L['damage-ph']);
+  setPlaceholder('dmg-location', L['location-ph']);
+  setTxt('btn-submit-damage', L['submit-damage']);
+  setTxt('damage-submitted-title', L['damage-sent']);
+  setTxt('damage-submitted-sub', L['damage-sent-sub']);
+  // My Vehicle
+  setTxt('my-vehicle-title', L['my-vehicle']);
+  // Checklist
+  setTxt('cl-title', L['checklist']);
+  setTxt('cl-subtitle', L['checklist-sub']);
+  setTxt('cl-photo-title', L['inspection-photo']);
+  setTxt('cl-photo-sub-txt', L['photo-sub']);
+  setTxt('cl-notes-title', L['checklist-notes']);
+  setPlaceholder('cl-notes', L['checklist-notes-ph']);
+  setTxt('cl-submit-btn', L['submit-checklist']);
+  setTxt('cl-done-title', L['checklist-done']);
+  setTxt('cl-done-sub', L['checklist-done-sub']);
+  setTxt('cl-redo-btn', L['redo']);
+  // Settings
+  setTxt('settings-title', L['admin-settings']);
+  setTxt('settings-session-title', L['session']);
+  setTxt('settings-save-btn', L['save-settings']);
+  setTxt('settings-sync-title', L['sync-lbl']);
+  setTxt('settings-load-btn', L['load-sheets']);
+  setTxt('settings-save-sheets-btn', L['save-sheets']);
+  setTxt('settings-logout-btn', L['log-out']);
+  // Login screen
+  setTxt('login-not-listed', L['not-listed']);
+  setTxt('login-pin-greeting-prefix', L['hi']);
+  setTxt('login-back-btn', L['back']);
+  // Header sync btn
+  const syncBtn=document.getElementById('sync-btn');
+  if(syncBtn) syncBtn.textContent=L['sync'];
+  // Lang toggle btn
+  const langBtn=document.getElementById('lang-btn');
+  if(langBtn) langBtn.textContent=currentLang==='en'?'🌐 ES':'🌐 EN';
+  // Re-render dynamic content
+  renderVehiclePicker();
+  renderMileHistory();
+  renderMyVehicle();
+  renderChecklistItems();
+}
+
+function setTxt(id,txt){ const el=document.getElementById(id); if(el&&txt) el.textContent=txt; }
+function setPlaceholder(id,txt){ const el=document.getElementById(id); if(el&&txt) el.placeholder=txt; }
+
+function toggleLang(){
+  currentLang = currentLang==='en'?'es':'en';
+  try{ localStorage.setItem('fleet_lang', currentLang); }catch(e){}
+  applyLang();
+}
+
+// ── GPS Location Tracking ────────────────────────────────────────────────
+let trackingInterval = null;
+let isTracking = false;
+let lastLocation = null;
+
+function startTracking(){
+  if(isTracking){
+    stopTracking();
+    return;
+  }
+  if(!navigator.geolocation){
+    alert(currentLang==='es'?'GPS no disponible en este dispositivo.':'GPS not available on this device.');
+    return;
+  }
+  isTracking = true;
+  updateTrackBtn();
+  sendLocation(); // send immediately
+  trackingInterval = setInterval(sendLocation, 60000); // every 60 seconds
+}
+
+function stopTracking(){
+  isTracking = false;
+  if(trackingInterval){ clearInterval(trackingInterval); trackingInterval=null; }
+  updateTrackBtn();
+}
+
+function updateTrackBtn(){
+  const btn = document.getElementById('track-btn');
+  if(!btn) return;
+  if(isTracking){
+    btn.textContent = '📍 ON';
+    btn.style.background = 'rgba(34,197,94,.3)';
+    btn.style.borderColor = 'rgba(34,197,94,.6)';
+    btn.style.color = '#22c55e';
+  } else {
+    btn.textContent = '📍 Off';
+    btn.style.background = 'rgba(34,197,94,.1)';
+    btn.style.borderColor = 'rgba(34,197,94,.25)';
+    btn.style.color = 'rgba(255,255,255,.5)';
+  }
+}
+
+function sendLocation(){
+  if(!selectedVehicleId) return;
+  const syncUrl = localStorage.getItem('fleet_sync_url')||'';
+  if(!syncUrl) return;
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      const v = vehicles.find(x=>x.id===selectedVehicleId);
+      const loc = {
+        vehicleId: selectedVehicleId,
+        plate:     v ? v.plate : '',
+        driver:    loggedInDriver ? loggedInDriver.name : (settings.driverName||''),
+        lat:       pos.coords.latitude,
+        lng:       pos.coords.longitude,
+        speed:     pos.coords.speed ? Math.round(pos.coords.speed * 2.237) : 0, // m/s to mph
+        accuracy:  Math.round(pos.coords.accuracy),
+        timestamp: new Date().toISOString(),
+      };
+      lastLocation = loc;
+      // Save locally
+      try{
+        const locs = JSON.parse(localStorage.getItem('fleet_locations')||'{}');
+        locs[selectedVehicleId] = loc;
+        localStorage.setItem('fleet_locations', JSON.stringify(locs));
+      }catch(e){}
+      // Push to sheets
+      fetch(syncUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({action:'location', loc}),
+        redirect:'follow'
+      }).catch(function(){});
+    },
+    function(err){ console.warn('GPS error:', err.message); },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:30000}
+  );
 }
 
 // ── Driver Sync (no admin required) ──────────────────────────────────────
@@ -1265,6 +1490,7 @@ function checkPin(){
 }
 
 function logOut(){
+  stopTracking();
   try{ sessionStorage.removeItem('fleet_logged_in'); }catch(e){}
   loggedInDriver = null;
   currentPin = '';
@@ -1344,6 +1570,10 @@ try{
   if(firstTime && savedUrl) firstTime.style.display='none';
 }catch(e){}
 
+// Apply saved language
+try{ currentLang=localStorage.getItem('fleet_lang')||'en'; applyLang(); }catch(e){}
+// Set today's date in mileage form
+try{ document.getElementById('lm-date').value=new Date().toISOString().slice(0,10); }catch(e){}
 // Check session — show login if not logged in, skip if already in session
 try{
   const sess = JSON.parse(sessionStorage.getItem('fleet_logged_in')||'null');
