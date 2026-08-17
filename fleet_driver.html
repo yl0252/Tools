@@ -158,8 +158,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div id="admin-pin-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,25,40,.92);z-index:900;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px">
   <div style="background:#1a2d42;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:28px 24px;width:100%;max-width:300px;text-align:center">
     <div style="font-size:32px;margin-bottom:8px">🔐</div>
-    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Admin Access</div>
-    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:24px">Enter admin PIN to open settings</div>
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px" id="admin-pin-title">Admin Access</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:24px" id="admin-pin-subtitle">Enter admin PIN to continue</div>
     <div style="display:flex;justify-content:center;gap:14px;margin-bottom:20px" id="admin-pin-dots">
       <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
     </div>
@@ -189,7 +189,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="header-sub" id="h-sub">Select your vehicle to start</div>
     </div>
     <button onclick="toggleLang()" id="lang-btn" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-right:6px">🌐 ES</button>
-    <button onclick="startTracking()" id="track-btn" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-right:6px">📍 Off</button>
+    <button onclick="requestTrackingToggle()" id="track-btn" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:#22c55e;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-right:6px">📍 Off</button>
     <button onclick="driverSync()" id="sync-btn" style="background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.4);color:#fff;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)">☁️ Sync</button>
   </div>
   <div id="driver-sync-msg" style="font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:3px;min-height:13px"></div>
@@ -1077,6 +1077,19 @@ function toggleLang(){
 let trackingInterval = null;
 let isTracking = false;
 let lastLocation = null;
+let trackingPinPending = false;
+
+function requestTrackingToggle(){
+  trackingPinPending = true;
+  adminPinBuffer = '';
+  document.getElementById('admin-pin-error').style.display='none';
+  updateAdminDots();
+  const title = document.getElementById('admin-pin-title');
+  const sub   = document.getElementById('admin-pin-subtitle');
+  if(title) title.textContent = isTracking ? '📍 Stop Tracking?' : '📍 Start Tracking?';
+  if(sub)   sub.textContent   = 'Enter admin PIN to '+(isTracking?'turn off':'turn on')+' GPS tracking';
+  document.getElementById('admin-pin-overlay').style.display='flex';
+}
 
 function startTracking(){
   if(isTracking){
@@ -1087,10 +1100,24 @@ function startTracking(){
     alert(currentLang==='es'?'GPS no disponible en este dispositivo.':'GPS not available on this device.');
     return;
   }
-  isTracking = true;
-  updateTrackBtn();
-  sendLocation(); // send immediately
-  trackingInterval = setInterval(sendLocation, 60000); // every 60 seconds
+  // Request permission first with a test call
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      // Permission granted - start tracking
+      isTracking = true;
+      updateTrackBtn();
+      sendLocation();
+      trackingInterval = setInterval(sendLocation, 60000);
+    },
+    function(err){
+      // Permission denied or error
+      var msg = err.code === 1
+        ? (currentLang==='es'?'Permiso de ubicación denegado. Actívalo en la configuración del navegador.':'Location permission denied. Enable it in browser settings.')
+        : 'GPS error: '+err.message;
+      alert(msg);
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+  );
 }
 
 function stopTracking(){
@@ -1280,11 +1307,16 @@ function requestAdminAccess(){
   adminPinBuffer = '';
   document.getElementById('admin-pin-error').style.display='none';
   updateAdminDots();
+  const title = document.getElementById('admin-pin-title');
+  const sub   = document.getElementById('admin-pin-subtitle');
+  if(title) title.textContent = 'Admin Access';
+  if(sub)   sub.textContent   = 'Enter admin PIN to open settings';
   document.getElementById('admin-pin-overlay').style.display='flex';
 }
 
 function closeAdminPin(){
   adminPinBuffer = '';
+  trackingPinPending = false;
   document.getElementById('admin-pin-overlay').style.display='none';
 }
 
@@ -1309,7 +1341,13 @@ function updateAdminDots(){
 function checkAdminPin(){
   if(adminPinBuffer === getAdminPin()){
     closeAdminPin();
-    // Load current settings into form before showing
+    // Check if this was a tracking toggle request
+    if(trackingPinPending){
+      trackingPinPending = false;
+      startTracking();
+      return;
+    }
+    // Otherwise open settings
     const saved = JSON.parse(localStorage.getItem(LS.settings)||'{}');
     const pinEl = document.getElementById('s-admin-pin');
     const apiEl = document.getElementById('s-api-key');
@@ -1318,7 +1356,6 @@ function checkAdminPin(){
     if(apiEl) apiEl.value = saved.apiKey||'';
     const savedUrl = localStorage.getItem('fleet_sync_url')||'';
     if(urlEl) urlEl.value = savedUrl;
-    console.log('Loaded sync URL:', savedUrl);
     goScreen('scr-settings','nb-settings');
   } else {
     document.getElementById('admin-pin-error').style.display='block';
