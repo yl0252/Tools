@@ -1092,26 +1092,26 @@ function requestTrackingToggle(){
 }
 
 function startTracking(){
-  alert('startTracking called. isTracking='+isTracking+' geolocation='+(!!navigator.geolocation));
   if(isTracking){
     stopTracking();
     return;
   }
   if(!navigator.geolocation){
-    alert('No geolocation available');
+    alert(currentLang==='es'?'GPS no disponible.':'GPS not available on this device.');
     return;
   }
-  alert('Requesting GPS position...');
   navigator.geolocation.getCurrentPosition(
     function(pos){
-      alert('GPS got position: '+pos.coords.latitude.toFixed(4)+','+pos.coords.longitude.toFixed(4));
       isTracking = true;
       updateTrackBtn();
       sendLocation();
       trackingInterval = setInterval(sendLocation, 60000);
     },
     function(err){
-      alert('GPS ERROR code='+err.code+' msg='+err.message);
+      var msg = err.code===1
+        ? (currentLang==='es'?'Permiso de ubicación denegado.':'Location permission denied. Enable it in browser settings.')
+        : 'GPS error: '+err.message;
+      alert(msg);
     },
     {enableHighAccuracy:false, timeout:15000, maximumAge:60000}
   );
@@ -1311,10 +1311,15 @@ function requestAdminAccess(){
   document.getElementById('admin-pin-overlay').style.display='flex';
 }
 
+function cancelAdminPin(){
+  trackingPinPending = false;
+  closeAdminPin();
+}
+
 function closeAdminPin(){
   adminPinBuffer = '';
-  trackingPinPending = false;
   document.getElementById('admin-pin-overlay').style.display='none';
+  // Note: trackingPinPending is NOT reset here - checkAdminPin reads it first
 }
 
 function adminPinPress(digit){
