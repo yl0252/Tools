@@ -1092,31 +1092,28 @@ function requestTrackingToggle(){
 }
 
 function startTracking(){
+  alert('startTracking called. isTracking='+isTracking+' geolocation='+(!!navigator.geolocation));
   if(isTracking){
     stopTracking();
     return;
   }
   if(!navigator.geolocation){
-    alert(currentLang==='es'?'GPS no disponible en este dispositivo.':'GPS not available on this device.');
+    alert('No geolocation available');
     return;
   }
-  // Request permission first with a test call
+  alert('Requesting GPS position...');
   navigator.geolocation.getCurrentPosition(
     function(pos){
-      // Permission granted - start tracking
+      alert('GPS got position: '+pos.coords.latitude.toFixed(4)+','+pos.coords.longitude.toFixed(4));
       isTracking = true;
       updateTrackBtn();
       sendLocation();
       trackingInterval = setInterval(sendLocation, 60000);
     },
     function(err){
-      // Permission denied or error
-      var msg = err.code === 1
-        ? (currentLang==='es'?'Permiso de ubicación denegado. Actívalo en la configuración del navegador.':'Location permission denied. Enable it in browser settings.')
-        : 'GPS error: '+err.message;
-      alert(msg);
+      alert('GPS ERROR code='+err.code+' msg='+err.message);
     },
-    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+    {enableHighAccuracy:false, timeout:15000, maximumAge:60000}
   );
 }
 
