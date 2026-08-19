@@ -2532,21 +2532,21 @@ async function loadAllFromSheets(){
     if(data.stock){
       stockData = JSON.parse(data.stock);
       await idbSave('stock_data_v1', stockData).catch(()=>{});
-      extractVendors(stockData);
+      try{ extractVendors(stockData); }catch(e){}
       const el=document.getElementById('stock-name');
-      if(el) el.textContent='✓ Loaded from Sheets';
+      if(el) el.textContent='✓ Loaded from Sheets ('+stockData.length+' items)';
       document.getElementById('card-stock')?.classList.add('loaded');
-      loaded.push('stock');
+      loaded.push('stock ('+stockData.length+' items)');
     }
     if(data.sales){
       salesDatedData = JSON.parse(data.sales);
-      await idbSave('sales_data_v1', salesDatedData).catch(()=>{});
-      buildSalesTrendMap(salesDatedData);
       window._salesDatedFull = salesDatedData;
+      await idbSave('sales_data_v1', salesDatedData).catch(()=>{});
+      try{ buildSalesTrendMap(salesDatedData); }catch(e){}
       const el=document.getElementById('salesdated-name');
-      if(el) el.textContent='✓ Loaded from Sheets';
+      if(el) el.textContent='✓ Loaded from Sheets ('+salesDatedData.length+' rows)';
       document.getElementById('card-sales-dated')?.classList.add('loaded');
-      loaded.push('sales');
+      loaded.push('sales ('+salesDatedData.length+' rows)');
     }
     if(data.fillin){
       fillInData = JSON.parse(data.fillin);
@@ -2581,6 +2581,13 @@ async function loadAllFromSheets(){
 
     showGsStatus('✓ Loaded: '+loaded.join(', '),'#4ade80');
     try{ localStorage.setItem('inv_script_url', url); }catch(e){}
+
+    // Enable Run Analysis button if we have minimum required data
+    if(typeof checkReady === 'function') checkReady();
+
+    // Also trigger any post-load rendering
+    if(typeof renderSidebar === 'function') renderSidebar();
+
   }catch(e){
     showGsStatus('✗ '+e.message,'#f87171');
   }
