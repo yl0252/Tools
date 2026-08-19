@@ -742,16 +742,26 @@ tbody tr.row-selected:hover{background:#DCFCE7!important}
     <div class="sb-section">
       <div class="sb-section-head" onclick="toggleSB('sb-gsync')">🔗 GOOGLE SHEETS SYNC <span>▾</span></div>
       <div class="sb-section-body" id="sb-gsync">
-        <div class="sb-info-box">Paste your Google Sheet URL to sync vendor settings, lead times, fill-in maps and holiday configs with your team. <strong>Sheet must be published to web.</strong></div>
+        <div class="sb-info-box">
+          Paste your Apps Script URL to save and load all data — stock, sales, fill-in map, vendors and CBM — so your whole team stays in sync without re-uploading files.
+        </div>
         <div class="sb-ctrl">
-          <label>Google Sheet URL</label>
-          <input type="text" id="gs-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none">
+          <label>Apps Script URL</label>
+          <input type="text" id="inv-script-url" placeholder="https://script.google.com/macros/s/..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none" oninput="try{localStorage.setItem('inv_script_url',this.value)}catch(e){}">
+          <!-- hidden gs-url so existing code doesn't break -->
+          <input type="hidden" id="gs-url">
         </div>
         <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-          <button class="btn-sb-save" style="flex:1;background:var(--blue)" onclick="syncFromGoogle()">⬇ Pull</button>
-          <button class="btn-sb-save" style="flex:1;background:var(--green-dk)" onclick="pushToGoogle()">⬆ Push</button>
+          <button class="btn-sb-save" style="flex:1;background:var(--blue)" onclick="loadAllFromSheets()">⬇ Load All Data</button>
+          <button class="btn-sb-save" style="flex:1;background:var(--green-dk)" onclick="saveAllToSheets()">⬆ Save All Data</button>
         </div>
         <div class="sb-status-msg" id="gs-status" style="margin-top:6px"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)">
+          <label style="font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Shipment Tracker Sync URL (optional)</label>
+          <input type="text" id="shipment-script-url" placeholder="Apps Script URL from Shipment Tracker..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none;margin-top:4px" oninput="try{localStorage.setItem('shipment_script_url',this.value)}catch(e){}">
+          <button class="btn-sb-save" style="width:100%;margin-top:6px;background:rgba(14,165,233,.3)" onclick="loadShipmentsInTransit()">🚢 Load Items In Transit</button>
+          <div class="sb-status-msg" id="shipment-status" style="margin-top:4px"></div>
+        </div>
         <div style="margin-top:8px">
           <span class="btn-tmpl" onclick="openGoogleSetupGuide()" style="font-size:10px;color:rgba(255,255,255,.4);cursor:pointer;text-decoration:underline;display:block;text-align:center">📋 How to set up Google Sheet</span>
         </div>
@@ -2434,6 +2444,278 @@ async function syncFromGoogle(){
   } catch(err){
     showGsStatus('✗ Error: '+err.message+' — Make sure the sheet is published to web.','#f87171');
   }
+}
+
+// ── Apps Script Order Data Sync ──────────────────────────────────────────
+function getInvScriptUrl(){
+  return (document.getElementById('inv-script-url')?.value.trim())
+    || localStorage.getItem('inv_script_url') || '';
+}
+
+// ── Full Data Sync ────────────────────────────────────────────────────────
+function getInvScriptUrl(){
+  return (document.getElementById('inv-script-url')?.value.trim())
+    || localStorage.getItem('inv_script_url') || '';
+}
+
+function showGsStatus(msg, color){
+  const el = document.getElementById('gs-status');
+  if(el){ el.textContent=msg; el.style.color=color||'#4ade80'; }
+}
+
+async function saveAllToSheets(){
+  const url = getInvScriptUrl();
+  if(!url){ showGsStatus('⚠ Paste your Apps Script URL first','#f87171'); return; }
+  showGsStatus('⏳ Saving all data...','#fbbf24');
+
+  try{
+    // Collect all data
+    const stock   = stockData   || await idbLoad('stock_data_v1').catch(()=>null);
+    const sales   = salesDatedData || await idbLoad('sales_data_v1').catch(()=>null);
+    const fillin  = fillInData  || await idbLoad('fillin_data_v1').catch(()=>null);
+
+    const payload = {
+      action: 'invSaveAll',
+      stock:   stock   ? JSON.stringify(stock)   : null,
+      sales:   sales   ? JSON.stringify(sales)   : null,
+      fillin:  fillin  ? JSON.stringify(fillin)  : null,
+      vendors: JSON.stringify(vendorSettings||{}),
+      cbm:     JSON.stringify(cbmData||{}),
+      fillInMap: JSON.stringify(fillInMap||{}),
+      savedAt: new Date().toISOString(),
+    };
+
+    const json  = JSON.stringify(payload);
+    const CHUNK = 49000;
+    const chunks = [];
+    for(let i=0;i<json.length;i+=CHUNK) chunks.push(json.slice(i,i+CHUNK));
+
+    await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({chunks, sheetName:'InvAllData'}),
+      redirect:'follow'
+    });
+
+    showGsStatus('✓ All data saved — stock, sales, fill-in, vendors, CBM','#4ade80');
+    try{ localStorage.setItem('inv_script_url', url); }catch(e){}
+  }catch(e){
+    showGsStatus('✗ '+e.message,'#f87171');
+  }
+}
+
+async function loadAllFromSheets(){
+  const url = getInvScriptUrl();
+  if(!url){ showGsStatus('⚠ Paste your Apps Script URL first','#f87171'); return; }
+  showGsStatus('⏳ Loading all data...','#fbbf24');
+
+  try{
+    const res  = await fetch(url+'?action=invLoadAll',{redirect:'follow'});
+    const data = await res.json();
+    if(data.error){ showGsStatus('✗ '+data.error,'#f87171'); return; }
+
+    let loaded = [];
+
+    if(data.stock){
+      stockData = JSON.parse(data.stock);
+      await idbSave('stock_data_v1', stockData).catch(()=>{});
+      extractVendors(stockData);
+      const el=document.getElementById('stock-name');
+      if(el) el.textContent='✓ Loaded from Sheets';
+      document.getElementById('card-stock')?.classList.add('loaded');
+      loaded.push('stock');
+    }
+    if(data.sales){
+      salesDatedData = JSON.parse(data.sales);
+      await idbSave('sales_data_v1', salesDatedData).catch(()=>{});
+      buildSalesTrendMap(salesDatedData);
+      window._salesDatedFull = salesDatedData;
+      const el=document.getElementById('salesdated-name');
+      if(el) el.textContent='✓ Loaded from Sheets';
+      document.getElementById('card-sales-dated')?.classList.add('loaded');
+      loaded.push('sales');
+    }
+    if(data.fillin){
+      fillInData = JSON.parse(data.fillin);
+      await idbSave('fillin_data_v1', fillInData).catch(()=>{});
+      buildFillInMap(fillInData);
+      const el=document.getElementById('fillin-name');
+      if(el) el.textContent='✓ Loaded from Sheets';
+      document.getElementById('card-fillin')?.classList.add('loaded');
+      loaded.push('fill-in');
+    }
+    if(data.vendors){
+      const v = JSON.parse(data.vendors);
+      Object.assign(vendorSettings, v);
+      saveLS();
+      loaded.push('vendors');
+    }
+    if(data.cbm){
+      const c = JSON.parse(data.cbm);
+      Object.assign(cbmData, c);
+      try{ localStorage.setItem(CBM_KEY, JSON.stringify(cbmData)); }catch(e){}
+      loaded.push('CBM');
+    }
+    if(data.fillInMap){
+      const f = JSON.parse(data.fillInMap);
+      Object.assign(fillInMap, f);
+      loaded.push('fill-in map');
+    }
+
+    showGsStatus('✓ Loaded: '+loaded.join(', '),'#4ade80');
+    try{ localStorage.setItem('inv_script_url', url); }catch(e){}
+  }catch(e){
+    showGsStatus('✗ '+e.message,'#f87171');
+  }
+}
+
+// ── Items In Transit from Shipment Tracker ────────────────────────────────
+let itemsInTransit = {};
+
+function loadShipmentsInTransit(){
+  const url = (document.getElementById('shipment-script-url')?.value.trim())
+    || localStorage.getItem('shipment_script_url') || '';
+  if(!url){
+    document.getElementById('shipment-status').textContent='⚠ Paste the Shipment Tracker Apps Script URL';
+    return;
+  }
+  localStorage.setItem('shipment_script_url', url);
+  document.getElementById('shipment-status').textContent='⏳ Loading...';
+
+  fetch(url, {redirect:'follow'})
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.error) throw new Error(data.error);
+    // Extract items on order from shipments
+    itemsInTransit = {};
+    const shipments = data.shipments || data.vehicles || [];
+    var count = 0;
+    shipments.forEach(function(s){
+      if(s.status === 'transit' || s.status === 'ordered'){
+        (s.items||[]).forEach(function(item){
+          if(item.itemNo){
+            itemsInTransit[String(item.itemNo).trim()] =
+              (itemsInTransit[String(item.itemNo).trim()]||0) + (item.qty||item.quantity||0);
+            count++;
+          }
+        });
+      }
+    });
+    document.getElementById('shipment-status').textContent =
+      '✓ Loaded '+count+' items in transit from '+shipments.length+' shipments';
+    // Re-render if analysis already run
+    if(allRows.length) renderRows();
+  })
+  .catch(function(e){
+    document.getElementById('shipment-status').textContent='✗ '+e.message;
+  });
+}
+
+function saveOrderDataToSheets(){
+  const url = getInvScriptUrl();
+  if(!url){ showGsStatus('⚠ Paste your Apps Script URL first','#f87171'); return; }
+  if(!allRows.length){ showGsStatus('⚠ No order data to save — run analysis first','#f87171'); return; }
+
+  showGsStatus('⏳ Saving to Sheets...','#fbbf24');
+
+  // Build human-readable rows for the sheet
+  const headers = [
+    'Item','Description','Vendor','Type','Status',
+    'Available','On Order','Customer Orders','Vendor Order','Net Position',
+    'Monthly Rate','Adj Monthly Rate','Seasonal Mult',
+    'Total Sold','Order Qty','Selected For Order','Saved At'
+  ];
+
+  const savedAt = new Date().toLocaleString();
+  const rows = allRows.map(function(r){
+    return [
+      r.item||'',
+      r.desc||'',
+      r.vendor||'',
+      r.vtype||'',
+      r.status||'',
+      r.avail||0,
+      r.onOrder||0,
+      r.custOrders||0,
+      r.vendorOrder||0,
+      r.netPosition||0,
+      Math.round((r.monthlyRate||0)*100)/100,
+      Math.round((r.adjMonthlyRate||0)*100)/100,
+      Math.round((r.seasonalMult||1)*100)/100,
+      r.totalSold||0,
+      r.orderQty||0,
+      selectedForOrder.has(r.item)?'YES':'',
+      savedAt,
+    ];
+  });
+
+  // Also save a summary of selected items on a separate sheet
+  const selectedRows = allRows.filter(function(r){ return selectedForOrder.has(r.item) && (r.orderQty||0)>0; });
+  const orderSummary = selectedRows.map(function(r){
+    return [r.item||'', r.desc||'', r.vendor||'', r.orderQty||0, r.vtype||'', savedAt];
+  });
+
+  const payload = {
+    action: 'invSaveRows',
+    headers: headers,
+    rows: rows,
+    orderSummaryHeaders: ['Item','Description','Vendor','Order Qty','Type','Saved At'],
+    orderSummary: orderSummary,
+    savedAt: savedAt,
+  };
+
+  fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify(payload),
+    redirect:'follow'
+  })
+  .then(function(){
+    showGsStatus('✓ Saved '+rows.length+' items + '+orderSummary.length+' on order list','#4ade80');
+    try{ localStorage.setItem('inv_script_url', url); }catch(e){}
+  })
+  .catch(function(e){ showGsStatus('✗ '+e.message,'#f87171'); });
+}
+
+function loadOrderDataFromSheets(){
+  const url = getInvScriptUrl();
+  if(!url){ showGsStatus('⚠ Paste your Apps Script URL first','#f87171'); return; }
+  showGsStatus('⏳ Loading order data...','#fbbf24');
+
+  fetch(url+'?action=invLoad',{redirect:'follow'})
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.error){ showGsStatus('✗ '+data.error,'#f87171'); return; }
+    if(!data.orderRows){ showGsStatus('⚠ No order data found. Save from this tool first.','#f87171'); return; }
+
+    // Restore order quantities and selections
+    let restored = 0;
+    data.orderRows.forEach(function(row){
+      if(row.orderQty > 0){
+        const existing = allRows.find(r=>r.item===row.item);
+        if(existing){
+          existing.orderQty = row.orderQty;
+          existing.vendorOrder = row.vendorOrder;
+          if(row.selected) selectedForOrder.add(row.item);
+          restored++;
+        }
+      }
+    });
+
+    // Restore vendor settings if available
+    if(data.vendorSettings){
+      Object.assign(vendorSettings, data.vendorSettings);
+      saveLS();
+    }
+    if(data.fillInMap){
+      Object.assign(fillInMap, data.fillInMap);
+    }
+
+    if(allRows.length) { renderRows(); renderSummary(3); }
+    showGsStatus('✓ Loaded — '+data.orderRows.length+' items, '+restored+' with quantities','#4ade80');
+    try{ localStorage.setItem('inv_script_url', url); }catch(e){}
+  })
+  .catch(function(e){ showGsStatus('✗ '+e.message,'#f87171'); });
 }
 
 function pushToGoogle(){
