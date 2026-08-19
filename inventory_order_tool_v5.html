@@ -2532,6 +2532,8 @@ async function loadAllFromSheets(){
     if(data.stock){
       stockData = JSON.parse(data.stock);
       await idbSave('stock_data_v1', stockData).catch(()=>{});
+      // Set name key so page-load restore block finds this data
+      try{ localStorage.setItem('stock_name_v1','Sheets ('+stockData.length+' items)'); }catch(e){}
       try{ extractVendors(stockData); }catch(e){}
       const el=document.getElementById('stock-name');
       if(el) el.textContent='✓ Loaded from Sheets ('+stockData.length+' items)';
@@ -2542,6 +2544,8 @@ async function loadAllFromSheets(){
       salesDatedData = JSON.parse(data.sales);
       window._salesDatedFull = salesDatedData;
       await idbSave('sales_data_v1', salesDatedData).catch(()=>{});
+      // Set name key so page-load restore block finds this data
+      try{ localStorage.setItem('sales_name_v1','Sheets ('+salesDatedData.length+' rows)'); }catch(e){}
       try{ buildSalesTrendMap(salesDatedData); }catch(e){}
       const el=document.getElementById('salesdated-name');
       if(el) el.textContent='✓ Loaded from Sheets ('+salesDatedData.length+' rows)';
@@ -2551,11 +2555,13 @@ async function loadAllFromSheets(){
     if(data.fillin){
       fillInData = JSON.parse(data.fillin);
       await idbSave('fillin_data_v1', fillInData).catch(()=>{});
-      buildFillInMap(fillInData);
+      // Set name key so page-load restore block finds this data
+      try{ localStorage.setItem('fillin_name_v1','Sheets ('+fillInData.length+' rows)'); }catch(e){}
+      try{ buildFillInMap(fillInData); }catch(e){}
       const el=document.getElementById('fillin-name');
-      if(el) el.textContent='✓ Loaded from Sheets';
+      if(el) el.textContent='✓ Loaded from Sheets ('+fillInData.length+' rows)';
       document.getElementById('card-fillin')?.classList.add('loaded');
-      loaded.push('fill-in');
+      loaded.push('fill-in ('+fillInData.length+' rows)');
     }
     if(data.vendors){
       const v = JSON.parse(data.vendors);
