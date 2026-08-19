@@ -2470,10 +2470,22 @@ async function saveAllToSheets(){
   showGsStatus('⏳ Saving all data...','#fbbf24');
 
   try{
-    // Collect all data
-    const stock   = stockData   || await idbLoad('stock_data_v1').catch(()=>null);
-    const sales   = salesDatedData || await idbLoad('sales_data_v1').catch(()=>null);
-    const fillin  = fillInData  || await idbLoad('fillin_data_v1').catch(()=>null);
+    // Collect all data - always try IndexedDB as fallback
+    const stock   = (stockData && stockData.length)
+      ? stockData : await idbLoad('stock_data_v1').catch(()=>null);
+    const sales   = (salesDatedData && salesDatedData.length)
+      ? salesDatedData : await idbLoad('sales_data_v1').catch(()=>null);
+    const fillin  = (fillInData && fillInData.length)
+      ? fillInData : await idbLoad('fillin_data_v1').catch(()=>null);
+
+    // CBM comes from localStorage
+    const cbmSaved = JSON.parse(localStorage.getItem(CBM_KEY)||'{}');
+    const cbmFinal = (Object.keys(cbmData||{}).length > 0) ? cbmData : cbmSaved;
+
+    // fillInMap from localStorage as well
+    let savedFillInMap = {};
+    try{ savedFillInMap = JSON.parse(localStorage.getItem('fillInMap_v1')||'{}'); }catch(e){}
+    const fillInMapFinal = (Object.keys(fillInMap||{}).length > 0) ? fillInMap : savedFillInMap;
 
     const payload = {
       action: 'invSaveAll',
@@ -2481,8 +2493,8 @@ async function saveAllToSheets(){
       sales:   sales   ? JSON.stringify(sales)   : null,
       fillin:  fillin  ? JSON.stringify(fillin)  : null,
       vendors: JSON.stringify(vendorSettings||{}),
-      cbm:     JSON.stringify(cbmData||{}),
-      fillInMap: JSON.stringify(fillInMap||{}),
+      cbm:     JSON.stringify(cbmFinal),
+      fillInMap: JSON.stringify(fillInMapFinal),
       savedAt: new Date().toISOString(),
     };
 
@@ -2553,9 +2565,13 @@ async function loadAllFromSheets(){
     }
     if(data.cbm){
       const c = JSON.parse(data.cbm);
-      Object.assign(cbmData, c);
-      try{ localStorage.setItem(CBM_KEY, JSON.stringify(cbmData)); }catch(e){}
-      loaded.push('CBM');
+      if(Object.keys(c).length > 0){
+        Object.assign(cbmData, c);
+        try{ localStorage.setItem(CBM_KEY, JSON.stringify(cbmData)); }catch(e){}
+        const cbmEl = document.getElementById('cbm-file-name');
+        if(cbmEl) cbmEl.textContent = '✓ Loaded from Sheets ('+Object.keys(cbmData).length+' items)';
+        loaded.push('CBM ('+Object.keys(cbmData).length+' items)');
+      }
     }
     if(data.fillInMap){
       const f = JSON.parse(data.fillInMap);
