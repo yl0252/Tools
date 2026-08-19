@@ -757,8 +757,9 @@ tbody tr.row-selected:hover{background:#DCFCE7!important}
         </div>
         <div class="sb-status-msg" id="gs-status" style="margin-top:6px"></div>
         <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1)">
-          <label style="font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Shipment Tracker Sync URL (optional)</label>
-          <input type="text" id="shipment-script-url" placeholder="Apps Script URL from Shipment Tracker..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none;margin-top:4px" oninput="try{localStorage.setItem('shipment_script_url',this.value)}catch(e){}">
+          <label style="font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Same Apps Script URL — Items In Transit</label>
+          <div style="font-size:10px;color:rgba(255,255,255,.25);margin-bottom:4px">Save from Shipment Tracker first, then load here to see what's already on the way.</div>
+          <input type="text" id="shipment-script-url" placeholder="Paste same Apps Script URL..." style="width:100%;padding:5px 8px;border:1.5px solid rgba(255,255,255,.15);border-radius:6px;font-size:11px;background:rgba(255,255,255,.07);color:white;outline:none;margin-top:4px" oninput="try{localStorage.setItem('shipment_script_url',this.value)}catch(e){}">
           <button class="btn-sb-save" style="width:100%;margin-top:6px;background:rgba(14,165,233,.3)" onclick="loadShipmentsInTransit()">🚢 Load Items In Transit</button>
           <div class="sb-status-msg" id="shipment-status" style="margin-top:4px"></div>
         </div>
@@ -2576,38 +2577,53 @@ function loadShipmentsInTransit(){
   const url = (document.getElementById('shipment-script-url')?.value.trim())
     || localStorage.getItem('shipment_script_url') || '';
   if(!url){
-    document.getElementById('shipment-status').textContent='⚠ Paste the Shipment Tracker Apps Script URL';
+    document.getElementById('shipment-status').textContent='⚠ Paste the Apps Script URL';
     return;
   }
   localStorage.setItem('shipment_script_url', url);
-  document.getElementById('shipment-status').textContent='⏳ Loading...';
+  document.getElementById('shipment-status').textContent='⏳ Loading shipments...';
 
   fetch(url, {redirect:'follow'})
   .then(function(r){ return r.json(); })
   .then(function(data){
     if(data.error) throw new Error(data.error);
-    // Extract items on order from shipments
+
+    // Shipment tracker saves as {shipments:[...]} in FleetJSON
+    // Each shipment has items:[{item, desc, qty, cost, ...}]
+    var shipments = data.shipments || [];
     itemsInTransit = {};
-    const shipments = data.shipments || data.vehicles || [];
     var count = 0;
+    var containers = 0;
+
     shipments.forEach(function(s){
-      if(s.status === 'transit' || s.status === 'ordered'){
-        (s.items||[]).forEach(function(item){
-          if(item.itemNo){
-            itemsInTransit[String(item.itemNo).trim()] =
-              (itemsInTransit[String(item.itemNo).trim()]||0) + (item.qty||item.quantity||0);
+      // Include ordered, in transit, and arrived-but-not-counted statuses
+      var status = (s.status||'').toLowerCase();
+      if(status === 'transit' || status === 'ordered' || status === 'in transit' || status === 'on order'){
+        containers++;
+        (s.items||[]).forEach(function(it){
+          // Item number could be in various fields
+          var itemNo = String(it.item||it.itemNo||it.sku||it.partNo||'').trim();
+          if(!itemNo) return;
+          var qty = parseFloat(it.qty||it.quantity||it.units||0)||0;
+          if(qty > 0){
+            itemsInTransit[itemNo] = (itemsInTransit[itemNo]||0) + qty;
             count++;
           }
         });
       }
     });
-    document.getElementById('shipment-status').textContent =
-      '✓ Loaded '+count+' items in transit from '+shipments.length+' shipments';
-    // Re-render if analysis already run
+
+    var msg = count > 0
+      ? '✓ '+count+' items in '+containers+' containers in transit'
+      : 'No items found in transit — make sure shipments are saved from the Shipment Tracker first';
+    document.getElementById('shipment-status').textContent = msg;
+    document.getElementById('shipment-status').style.color = count>0?'#4ade80':'#fbbf24';
+
     if(allRows.length) renderRows();
   })
   .catch(function(e){
     document.getElementById('shipment-status').textContent='✗ '+e.message;
+    document.getElementById('shipment-status').style.color='#f87171';
   });
 }
 
